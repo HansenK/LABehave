@@ -25,7 +25,8 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         main.cpp \
-        mainwindow.cpp
+        mainwindow.cpp \
+    tools.cpp
 
 
 INCLUDEPATH += C:/TCC/OpenCV/install/include

@@ -3,13 +3,15 @@
 
 #include <QMainWindow>
 #include <QDebug>
+#include <QGraphicsScene>
+#include <QGraphicsPixmapItem>
+#include <QImage>
+#include <QPixmap>
+#include <QCloseEvent>
+#include <QMessageBox>
+#include <QFileDialog>
 
-// OPENCV
-#include "opencv2/core/core.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc.hpp"
-#include "opencv2/imgcodecs.hpp"
-
+#include "opencv2/opencv.hpp"
 
 namespace Ui {
 class MainWindow;
@@ -23,8 +25,18 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
+protected:
+    void closeEvent(QCloseEvent *event);
+
+private slots:
+    void on_startBtn_pressed();
+
+    void on_actionAbrirVideo_triggered();
+
 private:
     Ui::MainWindow *ui;
+    QGraphicsPixmapItem pixmap, pixmapAlternative;
+    cv::VideoCapture video;
 };
 
 #endif // MAINWINDOW_H
