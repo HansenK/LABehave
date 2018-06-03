@@ -1,6 +1,8 @@
 using namespace cv;
 using namespace std;
 
+//#include "mainwindow.h"
+
 void poster(Mat& src, Mat& dst, uchar value)
 {
     if(!value) value = 1;
@@ -22,22 +24,7 @@ void passaFaixa(Mat& src, Mat& dst, uchar start, uchar end, uchar changeTo = 0)
     }
 }
 
-void getBackground(VideoCapture& video, Mat& dst, uint samples = 10)
-{
-    Ptr<BackgroundSubtractor> bg_model = createBackgroundSubtractorKNN().dynamicCast<BackgroundSubtractor>();
-    Mat frame, foregroundMask;
-
-    video.set(CAP_PROP_POS_FRAMES, 0);
-    video >> frame;
-    foregroundMask.create(dst.size(), dst.type());
-
-    for(uint i=0; i<samples; i++){
-        video.set(CAP_PROP_POS_FRAMES, (video.get(CAP_PROP_FRAME_COUNT)/samples)*i);
-        video >> frame;
-        bg_model->apply(frame, foregroundMask);
-        //addWeighted(dst, 0.9, frame, 0.1, 0, dst);
-    }
-
-    bg_model->getBackgroundImage(dst);
-    video.set(CAP_PROP_POS_FRAMES, 0);
+void sortContours(vector<vector<Point>>& contours){
+    auto contourComparator = [](vector<Point> a, vector<Point> b){ return contourArea(a) > contourArea(b); };
+    sort(contours.begin(), contours.end(), contourComparator);
 }
