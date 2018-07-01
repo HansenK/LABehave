@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1000</width>
-    <height>571</height>
+    <height>608</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -23,11 +23,11 @@
       <x>0</x>
       <y>0</y>
       <width>1001</width>
-      <height>501</height>
+      <height>551</height>
      </rect>
     </property>
     <property name="currentIndex">
-     <number>2</number>
+     <number>1</number>
     </property>
     <widget class="QWidget" name="tab1">
      <attribute name="title">
@@ -55,7 +55,7 @@
       <property name="geometry">
        <rect>
         <x>240</x>
-        <y>380</y>
+        <y>440</y>
         <width>401</width>
         <height>22</height>
        </rect>
@@ -119,22 +119,22 @@
          <x>0</x>
          <y>20</y>
          <width>221</width>
-         <height>421</height>
+         <height>431</height>
         </rect>
        </property>
        <property name="styleSheet">
         <string notr="true"/>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>4</number>
        </property>
        <widget class="QWidget" name="page">
         <property name="geometry">
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>221</width>
-          <height>259</height>
+          <width>100</width>
+          <height>30</height>
          </rect>
         </property>
         <attribute name="label">
@@ -163,10 +163,10 @@
           <item>
            <widget class="QCheckBox" name="checkShowRect">
             <property name="text">
-             <string>Retângulo em torno da cobaia</string>
+             <string>Bounding box</string>
             </property>
             <property name="checked">
-             <bool>false</bool>
+             <bool>true</bool>
             </property>
            </widget>
           </item>
@@ -177,6 +177,13 @@
             </property>
             <property name="checked">
              <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="checkShowMovement">
+            <property name="text">
+             <string>Contorno de movimento</string>
             </property>
            </widget>
           </item>
@@ -221,8 +228,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>221</width>
-          <height>259</height>
+          <width>100</width>
+          <height>30</height>
          </rect>
         </property>
         <attribute name="label">
@@ -360,8 +367,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>100</width>
-          <height>30</height>
+          <width>221</width>
+          <height>269</height>
          </rect>
         </property>
         <attribute name="label">
@@ -494,13 +501,81 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>100</width>
-          <height>30</height>
+          <width>221</width>
+          <height>269</height>
          </rect>
         </property>
         <attribute name="label">
          <string>Cobaia</string>
         </attribute>
+        <widget class="QWidget" name="horizontalLayoutWidget_4">
+         <property name="geometry">
+          <rect>
+           <x>0</x>
+           <y>0</y>
+           <width>221</width>
+           <height>41</height>
+          </rect>
+         </property>
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <item>
+           <widget class="QPushButton" name="btnAnimalSelect">
+            <property name="text">
+             <string>Selecionar cobaia</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="pushButton">
+            <property name="text">
+             <string>Editar</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QGroupBox" name="groupBox">
+         <property name="geometry">
+          <rect>
+           <x>0</x>
+           <y>50</y>
+           <width>221</width>
+           <height>141</height>
+          </rect>
+         </property>
+         <property name="title">
+          <string>Configurações da cobaia</string>
+         </property>
+         <widget class="QWidget" name="horizontalLayoutWidget_8">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>20</y>
+            <width>221</width>
+            <height>41</height>
+           </rect>
+          </property>
+          <layout class="QHBoxLayout" name="horizontalLayout_11">
+           <item>
+            <widget class="QLabel" name="label_8">
+             <property name="text">
+              <string>Nome:</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLineEdit" name="lineEdit"/>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pushButton_6">
+             <property name="text">
+              <string>Ok</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </widget>
        </widget>
        <widget class="QWidget" name="pageAnalysis">
         <property name="geometry">
@@ -639,55 +714,65 @@
         <x>650</x>
         <y>350</y>
         <width>341</width>
-        <height>111</height>
+        <height>139</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout">
-       <item row="0" column="0">
-        <widget class="QPushButton" name="startBtn">
-         <property name="enabled">
-          <bool>true</bool>
-         </property>
-         <property name="styleSheet">
-          <string notr="true">color: rgb(0, 111, 81)</string>
-         </property>
+       <item row="4" column="0">
+        <widget class="QLabel" name="label_7">
          <property name="text">
-          <string>Iniciar Análise</string>
+          <string>Final:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
          </property>
         </widget>
        </item>
-       <item row="1" column="0">
-        <layout class="QHBoxLayout" name="horizontalLayout_7">
-         <item>
-          <widget class="QLabel" name="label_5">
-           <property name="text">
-            <string>Início:</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignCenter</set>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QTimeEdit" name="startTime">
-           <property name="currentSection">
-            <enum>QDateTimeEdit::HourSection</enum>
-           </property>
-           <property name="displayFormat">
-            <string>HH:mm:ss</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="btnStartTimeSetInstant">
-           <property name="text">
-            <string>Instante atual</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
+       <item row="3" column="2">
+        <widget class="QPushButton" name="btnStartTimeSetInstant">
+         <property name="text">
+          <string>Instante atual</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="2">
+        <widget class="QPushButton" name="btnEndTimeSetInstant">
+         <property name="text">
+          <string>Instante atual</string>
+         </property>
+        </widget>
        </item>
        <item row="3" column="0">
+        <widget class="QLabel" name="label_5">
+         <property name="text">
+          <string>Início:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QTimeEdit" name="startTime">
+         <property name="currentSection">
+          <enum>QDateTimeEdit::HourSection</enum>
+         </property>
+         <property name="displayFormat">
+          <string>HH:mm:ss</string>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="QTimeEdit" name="endTime">
+         <property name="currentSection">
+          <enum>QDateTimeEdit::HourSection</enum>
+         </property>
+         <property name="displayFormat">
+          <string>HH:mm:ss</string>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="0" colspan="3">
         <widget class="QProgressBar" name="progressBar">
          <property name="enabled">
           <bool>true</bool>
@@ -701,35 +786,34 @@
         </widget>
        </item>
        <item row="2" column="0">
-        <layout class="QHBoxLayout" name="horizontalLayout_10">
-         <item>
-          <widget class="QLabel" name="label_7">
-           <property name="text">
-            <string>Final:</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignCenter</set>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QTimeEdit" name="endTime">
-           <property name="currentSection">
-            <enum>QDateTimeEdit::HourSection</enum>
-           </property>
-           <property name="displayFormat">
-            <string>HH:mm:ss</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="btnEndTimeSetInstant">
-           <property name="text">
-            <string>Instante atual</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
+        <widget class="QPushButton" name="startBtn">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">color: rgb(0, 111, 81)</string>
+         </property>
+         <property name="text">
+          <string>Iniciar Análise</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="1">
+        <widget class="QPushButton" name="pauseBtn">
+         <property name="text">
+          <string>Pausar Análise</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2">
+        <widget class="QPushButton" name="nextBtn">
+         <property name="text">
+          <string>Avançar Frame &gt;&gt;</string>
+         </property>
+        </widget>
        </item>
       </layout>
      </widget>
@@ -776,6 +860,66 @@
          <widget class="QLabel" name="labelTime">
           <property name="text">
            <string>00:00:00</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+     <widget class="QFrame" name="adjustBox">
+      <property name="geometry">
+       <rect>
+        <x>240</x>
+        <y>380</y>
+        <width>401</width>
+        <height>61</height>
+       </rect>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <widget class="QWidget" name="verticalLayoutWidget_5">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>0</y>
+         <width>401</width>
+         <height>51</height>
+        </rect>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_5">
+        <item>
+         <widget class="QLabel" name="label_9">
+          <property name="text">
+           <string>Ajuste de contraste</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSlider" name="adjustSlider">
+          <property name="layoutDirection">
+           <enum>Qt::RightToLeft</enum>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">background-color: rgb(255, 85, 0);</string>
+          </property>
+          <property name="maximum">
+           <number>255</number>
+          </property>
+          <property name="pageStep">
+           <number>10</number>
+          </property>
+          <property name="value">
+           <number>200</number>
+          </property>
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
           </property>
          </widget>
         </item>

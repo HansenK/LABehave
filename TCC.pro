@@ -32,21 +32,18 @@ SOURCES += \
 INCLUDEPATH += C:/TCC/OpenCV/install/include
 
 LIBS += -LC:\\TCC\\OpenCV\\bin \
-    libopencv_core341d \
-    libopencv_calib3d341d \
-    libopencv_features2d341d \
-    libopencv_flann341d \
-    libopencv_highgui341d \
-    libopencv_imgcodecs341d \
-    libopencv_imgproc341d \
-    libopencv_ml341d \
-    libopencv_objdetect341d \
-    libopencv_photo341d \
-    libopencv_shape341d \
-    libopencv_stitching341d \
-    libopencv_superres341d \
-    libopencv_video341d \
-    libopencv_videoio341d \
+    libopencv_core400d \
+    libopencv_calib3d400d \
+    libopencv_highgui400d \
+    libopencv_imgcodecs400d \
+    libopencv_imgproc400d \
+    libopencv_ml400d \
+    libopencv_objdetect400d \
+    libopencv_shape400d \
+    libopencv_stitching400d \
+    libopencv_superres400d \
+    libopencv_video400d \
+    libopencv_videoio400d \
 
 HEADERS += \
         mainwindow.h

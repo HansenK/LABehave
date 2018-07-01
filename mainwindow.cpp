@@ -10,6 +10,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->setupUi(this);
 
     ui->confirmBox->hide();
+    ui->adjustBox->hide();
     ui->configBox->setEnabled(false);
 
     ui->graphicsView->setScene(new QGraphicsScene(this));
@@ -22,9 +23,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->graphicsViewBackground->scene()->addItem(&pixmapBackground);
 
     ui->slider->setMaximum(255);
-    ui->slider->setValue(100);
 
     ui->alternativeViewSelector->addItem("máscara");
+    ui->alternativeViewSelector->addItem("movimento");
+    ui->alternativeViewSelector->addItem("orientação");
 }
 
 MainWindow::~MainWindow()
@@ -62,7 +64,7 @@ QTime MainWindow::getVideoTime(){
 }
 QTime MainWindow::getVideoDuration(){
     QTime duration(0,0,0);
-    duration = duration.addSecs(video.get(CV_CAP_PROP_FRAME_COUNT)/video.get(CV_CAP_PROP_FPS));
+    duration = duration.addSecs(video.get(CAP_PROP_FRAME_COUNT)/video.get(CAP_PROP_FPS));
     return duration;
 }
 
@@ -112,6 +114,37 @@ void MainWindow::setBackground(Mat& frame){
     pixmapBackground.setPixmap( QPixmap::fromImage(qimg) );
     ui->graphicsViewBackground->fitInView(&pixmapBackground, Qt::KeepAspectRatio);
 }
+int MainWindow::setThreshold(){
+    video.set(CAP_PROP_POS_FRAMES, (video.get(CAP_PROP_FRAME_COUNT)/2));
+    video >> frame;
+    cvtColor(frame, frame, COLOR_BGR2RGB);
+
+    Mat frame2;
+    vector<vector<Point>> contours;
+    vector<Vec4i> hierarchy;
+    int gtArea = 0, th;
+
+    for(int i=1; i<255; i++){
+        frame2 = frame.clone();
+        frame2 = frame2 - background;
+        cvtColor(frame2, frame2, COLOR_BGR2GRAY);
+        threshold(frame2, frame2, i, 255, THRESH_BINARY);
+
+        findContours(frame2, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0,0));
+
+        if(contours.size() <= 10){
+            sortContours(contours);
+            if(contourArea(contours[0]) > gtArea){
+                gtArea = contourArea(contours[0]);
+                th = i;
+            }
+        }
+    }
+
+    return th;
+}
+
+
 
 void MainWindow::on_actionAbrirVideo_triggered()
 {
@@ -135,7 +168,7 @@ void MainWindow::on_actionAbrirVideo_triggered()
 
     ui->graphicsView->setSceneRect(0, 0, frame.cols, frame.rows);
     ui->graphicsViewAlternative->setSceneRect(0, 0, frame.cols, frame.rows);
-    ui->framePosSlider->setMaximum(video.get(CV_CAP_PROP_FRAME_COUNT) - 1);
+    ui->framePosSlider->setMaximum(video.get(CAP_PROP_FRAME_COUNT) - 1);
 
     ui->startTime->setMaximumTime(getVideoDuration());
     ui->endTime->setMaximumTime(getVideoDuration());
@@ -239,25 +272,29 @@ void MainWindow::on_actionAbrirVideo_triggered()
                                     2, CV_RGB(255,255,0), 2);
                         }
 
-                        // ZONA GLOBAL ------------------------------------------------------------
-                        if(mode == MODE_ZONE_GLOBAL){
-                            maskZoneGlobal = Scalar::all(0);
+                        // SELECAO ----------------------------------------------------------------
+                        if(mode == MODE_ZONE_GLOBAL || mode == MODE_ANIMAL_SELECT){
+                            Mat maskSelection(frame.size(), CV_8UC1);
+                            maskSelection = Scalar::all(0);
                             Mat frameMasked;
 
                             if(tool == TOOL_RECTANGLE)
-                                maskZoneGlobal(Rect(selectPoints[0], selectPoints[1])).setTo(Scalar(255));
+                                maskSelection(Rect(selectPoints[0], selectPoints[1])).setTo(Scalar(255));
                             if(tool == TOOL_CIRCLE)
-                                circle(maskZoneGlobal,
+                                circle(maskSelection,
                                       (selectPoints[0]+selectPoints[1])*.5,
                                        norm(selectPoints[0]-selectPoints[1])/2,
                                        Scalar(255),
-                                       CV_FILLED);
+                                       FILLED);
                             if(tool == TOOL_POLYGON)
-                                fillConvexPoly( maskZoneGlobal, selectPolygon, Scalar(1) );
+                                fillConvexPoly( maskSelection, selectPolygon, Scalar(1) );
 
-                            frame.copyTo(frameMasked, maskZoneGlobal);
+                            frame.copyTo(frameMasked, maskSelection);
                             addWeighted(frame, 0.5, frameMasked, 0.5, 0, frame);
+
+                            if(mode == MODE_ZONE_GLOBAL) maskZoneGlobal = maskSelection.clone();
                         }
+
                     }
                 }
 
@@ -270,7 +307,7 @@ void MainWindow::on_actionAbrirVideo_triggered()
 
             // slider para ajustar o frame atual
             if(QApplication::mouseButtons() != Qt::LeftButton)
-                ui->framePosSlider->setValue(video.get(CV_CAP_PROP_POS_FRAMES));
+                ui->framePosSlider->setValue(video.get(CAP_PROP_POS_FRAMES));
 
             // Mostra o frame -----------------
             if(pause) circle(frame, p, 3, CV_RGB(0,140,255), 2);
@@ -287,11 +324,53 @@ void MainWindow::on_actionAbrirVideo_triggered()
             if(pause) frame = frameCopy.clone();
             // --------------------------------
 
+            // CONFIGURACAO DA COBAIA -------------------------------------------------
+            while(mode == MODE_ANIMAL_EDIT){
+                Mat animal2, animalMask;
+                vector<vector<Point>> animalContours;
+                vector<Vec4i> animalHierarchy;
+                frame(Rect(selectPoints[0], selectPoints[1])).copyTo(animal);
+                animalMask.create(animal.size(), CV_8UC1);
+
+                if(!background.empty()){
+                    subtract(animal, background((Rect(selectPoints[0], selectPoints[1]))), animalMask);
+                    cvtColor(animalMask, animalMask, COLOR_RGB2GRAY);
+                    threshold(animalMask, animalMask, ui->adjustSlider->value(), 255, THRESH_BINARY);
+                    GaussianBlur(animalMask, animalMask, Size(3,3), 0, 0);
+                }
+
+                animal.copyTo(animal2);
+                animal = Scalar::all(0);
+                animal2.copyTo(animal, animalMask);
+
+                // desenha os contornos
+                findContours(animalMask, animalContours, animalHierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0,0));
+                if(!animalContours.empty()){
+                    sortContours(animalContours); // ordena os contornos por area
+
+                    approxPolyDP( animalContours[0], animalContour, 0.005 * arcLength(animalContours[0], true), true );
+                    animalContours[0] = animalContour;
+
+                    drawContours(animal, animalContours, 0, CV_RGB(0,140,255), 1, 8, animalHierarchy, 0, Point());
+                }
+
+                QImage qimg(animal.data,
+                            animal.cols,
+                            animal.rows,
+                            animal.step,
+                            QImage::Format_RGB888);
+
+                pixmap.setPixmap( QPixmap::fromImage(qimg) );
+                ui->graphicsView->fitInView(&pixmap, Qt::KeepAspectRatio);
+                qApp->processEvents();
+            }// -----------------------------------------------------------------------
+
+
             // video chega no final
-            if(video.get(CV_CAP_PROP_POS_FRAMES) == video.get(CV_CAP_PROP_FRAME_COUNT)){
+            if(video.get(CAP_PROP_POS_FRAMES) == video.get(CAP_PROP_FRAME_COUNT)){
                 pause = true;
                 ui->btnPlayPause->setText("Play");
-                video.set(CV_CAP_PROP_POS_FRAMES, 0);
+                video.set(CAP_PROP_POS_FRAMES, 0);
             }
 
         }   qApp->processEvents();
@@ -307,8 +386,8 @@ void MainWindow::on_startBtn_pressed()
         lock = false;
         return;
     }
-    if(background.empty()){
-        ui->statusBar->showMessage("Defina o background primeiro!");
+    if(background.empty() || animalContour.empty()){
+        ui->statusBar->showMessage("Defina o background e a cobaia primeiro!");
         return;
     }
 
@@ -322,10 +401,10 @@ void MainWindow::on_startBtn_pressed()
                          ui->endTime->time().minute() * 60 +
                          ui->endTime->time().second();
 
-    startFrame = startTimeSecs * video.get(CV_CAP_PROP_FPS);
-    endFrame = endTimeSecs     * video.get(CV_CAP_PROP_FPS);
+    startFrame = startTimeSecs * video.get(CAP_PROP_FPS);
+    endFrame = endTimeSecs     * video.get(CAP_PROP_FPS);
 
-    video.set(CV_CAP_PROP_POS_FRAMES, startFrame);
+    video.set(CAP_PROP_POS_FRAMES, startFrame);
     // ----------------------------------------------------
 
     // Gerar ----------------------------------------------
@@ -338,23 +417,32 @@ void MainWindow::on_startBtn_pressed()
     ui->pageAnalysis->setEnabled(false);
     ui->progressBar->setMinimum(startFrame);
     ui->progressBar->setMaximum(endFrame);
+    ui->slider->setValue(ui->adjustSlider->value());
     trackImg.create(frame.size(), frame.type());
     trackImg = Scalar::all(0);
     lock = true;
 
     // Variaveis ------------
-    Mat frame2;
-    vector<vector<Point>> contours, contours_poly;
-    vector<Vec4i> hierarchy;
+    Mat frame2, frame_tmp, movement;
+    const int margin = 15, learnSizeCount = 100, nPts = 50;
+    int movementCount = 0, smallObjectArea = 0;
+    int gtIndexContour = 0;
+    float avArea, avAreaSum = 0;
+    bool isCalibrated = false;
+    vector<vector<Point>> contours, contours_poly, movementContours;
+    vector<Point> pts[nPts];
+    vector<Vec4i> hierarchy, movementHierarchy;
     vector<Rect> boundRect;
     vector<Moments> mu;                // moments
     vector<Point2f> mc;                // centro
-    vector<Point> pts, trackPath;      // trajeto;
+    vector<Point> trackPath, lastContour;
     uchar value;
-    vector<int> area;
-    int avArea, avAreaSum = 0;
-    int gtIndexContour = 0;
-    const int margin = 15, learnSizeCount = 200;
+    vector<float> area;
+
+    // mapeamento da orientacao da cobaia
+    const int orientationDist = 30;  //        30 pixels
+    Point firstOrientationPoint;    // ponto1 <---------> ponto2
+    Mat orientationMap;             // mapa contendo as direcoes
 
     //           Cores:
     const Scalar red   = Scalar(255, 0, 0),
@@ -365,104 +453,228 @@ void MainWindow::on_startBtn_pressed()
     {
         video >> frame;
         value = ui->slider->value();
-        ui->progressBar->setValue(video.get(CV_CAP_PROP_POS_FRAMES));
+        ui->progressBar->setValue(video.get(CAP_PROP_POS_FRAMES));
 
         if(!frame.empty())
         {
+            if(!smallObjectArea) smallObjectArea = (frame.rows*frame.cols)*0.003;
             frame.copyTo(frame2, maskZoneGlobal);
 
             // frame2 - background
             subtract(frame2, background, frame2);
 
             // Conversao de cores
-            cvtColor(frame2, frame2, COLOR_BGR2GRAY);
             cvtColor(frame, frame, COLOR_BGR2RGB);
+            cvtColor(frame2, frame2, COLOR_BGR2GRAY);
 
             // Aplica o threshold
             threshold(frame2, frame2, value, 255, THRESH_BINARY);
-            blur(frame2, frame2, Size(3, 3));
+            GaussianBlur(frame2, frame2, Size(3,3), 0, 0);
 
-            // transformacao do frame (verificar melhor depois)
-            Mat element = getStructuringElement(MORPH_ELLIPSE, Size(5,5));
-            morphologyEx(frame2, frame2, CV_MOP_OPEN, element);
+            // Deteccao de movimento ------------------------------------------
+            if(movementCount == 1){
+                frame2.copyTo(frame_tmp);
+            }else if(movementCount == 10){
+                subtract(frame2, frame_tmp, movement);
+                movementCount = 0;
+            }   movementCount++;
+
+            findContours(movement, movementContours, movementHierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0,0));
+
+            vector<Rect> movementBoundRect = vector<Rect>(movementContours.size());
+            Point2f movementCenter;
+            if(movementContours.size() > 0){
+                sortContours(movementContours);
+
+                for(uint i=0; i<movementContours.size(); i++){
+                    movementBoundRect[i] = boundingRect( Mat(movementContours[i]) );
+                    if(ui->checkShowMovement->isChecked())
+                        drawContours(frame, movementContours, i, CV_RGB(255,0,204), 2, 8, hierarchy, 0, Point());
+                }
+
+                Moments movementMoment = moments(movementContours[0], false);
+                movementCenter = Point2f(movementMoment.m10 / movementMoment.m00,
+                                         movementMoment.m01 / movementMoment.m00);
+            }
+            // ----------------------------------------------------------------
+
 
             // Encontra e desenha os contornos ------------------------------------------------------------------------
-            findContours(frame2, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0,0));
+            findContours(frame2, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0,0));
+
+            // organiza os contornos por maior area
+            sortContours(contours);
+            // remove os contornos com area pequena
+            for(uint i=0; i<contours.size(); i++){
+                if(contourArea(contours[i]) < smallObjectArea){
+                    contours.erase(contours.begin() + i, contours.end());
+                    break;
+                }
+            }
+
+            // usa a ultima posicao caso nao haja contornos
+            if(contours.empty() && !lastContour.empty()){
+                contours.push_back(lastContour);
+            }
+
             contours_poly = vector<vector<Point>>(contours.size());
             boundRect = vector<Rect>(contours.size());
             mu = vector<Moments>(contours.size());
             mc = vector<Point2f>(contours.size());
-
-            // organiza os contornos por maior area
-            sortContours(contours);
+            // Elipses e retangulos rotacionados para ocupar a menor area possivel
+            vector<RotatedRect> minRect( contours.size() );
+            vector<RotatedRect> minEllipse( contours.size() );
 
             for(uint i=0; i<contours.size(); i++){
                 approxPolyDP( contours[i], contours_poly[i], 0.005 * arcLength(contours[i], true), true );
                 boundRect[i] = boundingRect( Mat(contours_poly[i]) );
                 mu[i] = moments(contours_poly[i], false);
                 mc[i] = Point2f(mu[i].m10 / mu[i].m00, mu[i].m01 / mu[i].m00);
+                minRect[i] = minAreaRect( Mat(contours[i]) );
+                if( contours[i].size() > 5 ){
+                    minEllipse[i] = fitEllipse( Mat(contours[i]) );
+                }
             }
 
 
-            if(contours.size() > 0)
+            if(!contours.empty())
             {
-                // anti-teleporte -------------------------------------------------------------------------------------
-                // TODO: tratar eventos antes do programa atingir learnCount
                 gtIndexContour = 0;
 
-                if(pts.size() == learnSizeCount)
+                if(pts[0].size() == learnSizeCount-1)
                 {
-                    pts.erase(pts.begin());
+                    if(!isCalibrated){
+                        isCalibrated = true;
+                        for(uint i=1; i<pts[0].size()+1; i++){
+                            float ptDistance = norm(pts[0][i] - pts[0][i+1]);
+                            if (ptDistance > 5){
+                                pts[0].erase(pts[0].begin()+i);
+                                i--;
+                            }
+                        }
+                    }
+
+                    // remove o primeiro ponto caso o vetor atinja o limite
+                    for(int i=0; i<nPts; i++)
+                        pts[i].erase(pts[i].begin());
+
                     avAreaSum -= area[0];
                     area.erase(area.begin());
-
-                    for(uint i=0; i<mc.size(); i++){
-                        if(norm(Point(mc[i]) - pts[pts.size()-1]) < norm(Point(mc[gtIndexContour]) - pts[pts.size()-1]))
-                            if(abs(contourArea(contours_poly[i]) - avArea) < avArea*0.35) // diferenca de area
-                                if(norm(pts[pts.size()-1] - Point(mc[i])) < 7)            // distancia entre pontos
-                                    gtIndexContour = i;
-                    }
                 }
 
-                // calcula a area media da cobaia
-                int currentArea = contourArea(contours[gtIndexContour]);
+                if(!isCalibrated) putText(frame, "Calibrando", Point(0, frame.rows), FONT_HERSHEY_PLAIN, 4, red, 3);
+
+
+                // adiciona os valores ao vetor de pontos -----------------------------------------
+                for(uint i=0; i<nPts; i++){
+                    if(contours.size() > gtIndexContour + i)
+                        pts[i].push_back(mc[gtIndexContour + i]);
+                    else pts[i].push_back(mc[gtIndexContour]);
+
+                    if(pts[i].size() > 1)
+                        if(abs(norm(pts[i][pts[i].size()-1] - pts[i][pts[i].size()-2])) < 0.02){
+                            pts[i].pop_back();
+                        }
+                } // ------------------------------------------------------------------------------
+
+
+                // precisao -----------------------------------------------------------------
+                float gtQ = 0, Q;
+
+                if(pts[0].size() > 0)
+                {
+                    for(uint i=0; i<nPts; i++){
+                        if((contours.size() > i))
+                        {
+                            float mdistance = abs(norm(pts[i][pts[i].size()-1] - Point(movementCenter)));
+                            Q = 1/((matchShapes(animalContour, contours_poly[i], 1, 0.0) + mdistance)/2);
+
+                            if( Q > gtQ ){
+                                gtQ = Q;
+                                gtIndexContour = i;
+                                pts[0][pts[0].size()-1] = pts[i][pts[i].size()-1];
+                            }
+
+                            //ui->statusBar->showMessage(QString::number(contours.size()) + " " + QString::number(gtQ));
+                        }//else break;
+                    }
+                } // ------------------------------------------------------------------------------
+
+                // area media da cobaia (precisa estar depois do anti-teleporte)
+                float currentArea = contourArea(contours_poly[gtIndexContour]);
                 area.push_back(currentArea);
                 avAreaSum += currentArea;
                 avArea = avAreaSum / area.size();
 
-                ui->statusBar->showMessage("av:" + QString::number(avArea)
-                                         + " atual:" + QString::number(currentArea)
-                                         + " diferenca:" + QString::number(abs(contourArea(contours_poly[gtIndexContour]) - avArea)));
-
-                if(pts.empty())
-                    pts.push_back(mc[gtIndexContour]);
-                else if(Point(mc[gtIndexContour]) != pts[pts.size()-1])
-                    pts.push_back(mc[gtIndexContour]);
-
                 // ----------------------------------------------------------------------------------------------------
 
+
                 //trajeto
-                if(ui->checkCreateTrackMap->isChecked() && pts.size() > 1){
-                    uint trackColor = (((video.get(CV_CAP_PROP_POS_FRAMES) - startFrame)*255)/endFrame);
-                    line(trackImg, pts[pts.size()-2], pts[pts.size()-1], Scalar(trackColor,0,255-trackColor), 2);
+                if(ui->checkCreateTrackMap->isChecked() && pts[0].size() > 1 && isCalibrated){
+                    uint trackColor = (((video.get(CAP_PROP_POS_FRAMES) - startFrame)*255)/endFrame);
+                    line(trackImg, pts[0][1], pts[0][2], Scalar(trackColor,0,255-trackColor), 2);
                 }
-                if(ui->checkShowTrack->isChecked())
-                    polylines(frame, pts, false, red, 2);
+                if(ui->checkShowTrack->isChecked()){
+                    polylines(frame, pts[6], false, CV_RGB(255,255,255), 1);
+                    polylines(frame, pts[5], false, CV_RGB(0,255,255), 1);
+                    polylines(frame, pts[4], false, CV_RGB(255,0,255), 1);
+                    polylines(frame, pts[3], false, CV_RGB(255,255,0), 1);
+                    polylines(frame, pts[2], false, CV_RGB(0,0,255), 1);
+                    polylines(frame, pts[1], false, CV_RGB(255,0,0), 1);
+                    polylines(frame, pts[0], false, CV_RGB(0,255,0), 3);
+                }
 
                 //contorno:
                 if(ui->checkShowContour->isChecked())
                     drawContours(frame, contours_poly, gtIndexContour, CV_RGB(0,140,255), 2, 8, hierarchy, 0, Point());
 
-                //retangulo:
-                if(ui->checkShowRect->isChecked()){
+                //boundingbox:
+                if(ui->checkShowRect->isChecked())
+                {
+                    // Bounding box
                     rectangle(frame, Point(boundRect[gtIndexContour].tl().x - margin, boundRect[gtIndexContour].tl().y - margin),
                                      Point(boundRect[gtIndexContour].br().x + margin, boundRect[gtIndexContour].br().y + margin),
                                      cyan, 2, 8, 0);
+
+                    // Elipse + Retangulo rotacionados
+                    ellipse( frame, minEllipse[gtIndexContour], cyan, 2, 8 );
+                    Point2f rect_points[4]; minRect[gtIndexContour].points( rect_points );
+
+                    for( int j = 0; j < 4; j++ )
+                        line( frame, rect_points[j], rect_points[(j+1)%4], cyan, 1, 8 );
+
+                    //orientacao
+                    if(orientationMap.empty()) orientationMap.create(frame.size(), frame.type());
+
+                    uint quad;
+
+                    if(norm(firstOrientationPoint - pts[0][pts[0].size()-1]) > orientationDist){
+                        quad = getQuad(firstOrientationPoint, pts[0][pts[0].size()-1]);
+                        arrowedLine(orientationMap, firstOrientationPoint, pts[0][pts[0].size()-1], CV_RGB(255,255,0), 2);
+                        firstOrientationPoint = pts[0][pts[0].size()-1];
+                    }
+                    if(quad & 1){
+                        line(frame, Point(frame.cols/2, 0), Point(frame.cols, 0), CV_RGB(0,0,255), 8);
+                        line(frame, Point(frame.cols, 0), Point(frame.cols, frame.rows/2), CV_RGB(0,0,255), 8);
+                    }
+                    if(quad & 2){
+                        line(frame, Point(frame.cols, frame.rows/2), Point(frame.cols, frame.rows), CV_RGB(0,0,255), 8);
+                        line(frame, Point(frame.cols, frame.rows), Point(frame.cols/2, frame.rows), CV_RGB(0,0,255), 8);
+                    }
+                    if(quad & 4){
+                        line(frame, Point(frame.cols/2, frame.rows), Point(0, frame.rows), CV_RGB(0,0,255), 8);
+                        line(frame, Point(0, frame.rows), Point(0, frame.rows/2), CV_RGB(0,0,255), 8);
+                    }
+                    if(quad & 8){
+                        line(frame, Point(0, frame.rows/2), Point(0, 0), CV_RGB(0,0,255), 8);
+                        line(frame, Point(0, 0), Point(frame.cols/2, 0), CV_RGB(0,0,255), 8);
+                    }
                 }
 
                 //centro
                 if(ui->checkShowPoint->isChecked())
-                    circle(frame, mc[gtIndexContour], 5, red, -1, 8, 0);
+                    circle(frame, pts[0][pts[0].size()-1], 5, red, -1, 8, 0);
+
 
 
                 //TEXTO:
@@ -473,7 +685,7 @@ void MainWindow::on_startBtn_pressed()
                     text += "Rato : ";
 
                 //distancia percorrida
-                trackPath.push_back(pts[pts.size()-1]);
+                trackPath.push_back(pts[0][pts[0].size()-1]);
                 if(ui->checkShowDistance->isChecked())
                     text += to_string(arcLength(trackPath, false)/pixelsPerMeter) + " m";
 
@@ -481,7 +693,11 @@ void MainWindow::on_startBtn_pressed()
                         text ,
                         Point(boundRect[gtIndexContour].tl().x - margin, boundRect[gtIndexContour].tl().y - margin - 5),
                         FONT_HERSHEY_PLAIN, 1.5, CV_RGB(0,140,255), 2);
+
+                // copia o contorno da cobaia
+                lastContour = contours[gtIndexContour];
             }
+
 
             // Mostra o frame -----------------------------------------------------------
             QImage qimg(frame.data,
@@ -497,7 +713,9 @@ void MainWindow::on_startBtn_pressed()
             Mat *frameAlternative;
 
             if(ui->alternativeViewSelector->currentText() == "máscara") frameAlternative = &frame2;
+            if(ui->alternativeViewSelector->currentText() == "movimento") frameAlternative = &movement;
             if(ui->alternativeViewSelector->currentText() == "trajeto") frameAlternative = &trackImg;
+            if(ui->alternativeViewSelector->currentText() == "orientação") frameAlternative = &orientationMap;
 
             QImage::Format formatAlternative = (frameAlternative->channels() == 1) ? QImage::Format_Grayscale8 :
                                                (frameAlternative->channels() == 3) ? QImage::Format_RGB888 :
@@ -512,19 +730,28 @@ void MainWindow::on_startBtn_pressed()
             // -----------------------------------------------------------------------------------------------
 
             // Fim da analise
-            if(video.get(CV_CAP_PROP_POS_FRAMES) == endFrame){
+            if(video.get(CAP_PROP_POS_FRAMES) == endFrame){
                 video.release();
                 ui->startBtn->setText("Reiniciar Análise");
             }
 
             // reseta a trajetoria
             if(ui->btnResetTrack->isDown()){
-                pts.clear();
+                for(int i=0; i<nPts; i++)
+                    pts[i].clear();
             }
         }
         qApp->processEvents();
+        while(ui->pauseBtn->isChecked()){
+            ui->pauseBtn->setText("Continuar Análise");
+            qApp->processEvents();
+            if(ui->nextBtn->isDown()) break;
+        }   ui->pauseBtn->setText("Pausar Análise");
 }
 }
+
+
+
 
 // Impede o programa de fechar caso o video ainda esteja em execucao
 void MainWindow::closeEvent(QCloseEvent *event)
@@ -548,7 +775,7 @@ void MainWindow::on_btnPlayPause_pressed()
 void MainWindow::on_framePosSlider_sliderReleased()
 {
     if(video.isOpened()){
-        video.set(CV_CAP_PROP_POS_FRAMES, ui->framePosSlider->value());
+        video.set(CAP_PROP_POS_FRAMES, ui->framePosSlider->value());
         video >> frame;
         cvtColor(frame, frame, COLOR_BGR2RGB);
     }
@@ -648,6 +875,25 @@ void MainWindow::on_btnConfirm_pressed()
         }
     }
 
+    if(mode == MODE_ANIMAL_SELECT){
+        mode = MODE_ANIMAL_EDIT;
+        tool = -1;
+
+        ui->graphicsView->setSceneRect(0, 0, frame(Rect(selectPoints[0], selectPoints[1])).cols,
+                                             frame(Rect(selectPoints[0], selectPoints[1])).rows);
+        ui->graphicsViewAlternative->setSceneRect(0, 0, frame(Rect(selectPoints[0], selectPoints[1])).cols,
+                                                        frame(Rect(selectPoints[0], selectPoints[1])).rows);
+
+        ui->actionToolRectangle->setEnabled(false);
+        ui->adjustBox->show();
+        return;
+    }
+
+    if(mode == MODE_ANIMAL_EDIT){
+        ui->graphicsView->setSceneRect(0, 0, frame.cols, frame.rows);
+        ui->graphicsViewAlternative->setSceneRect(0, 0, frame.cols, frame.rows);
+    }
+
     ui->actionAbrirVideo->setEnabled(true);
     ui->actionToolCircle->setEnabled(true);
     ui->actionToolLine->setEnabled(true);
@@ -659,7 +905,8 @@ void MainWindow::on_btnConfirm_pressed()
     selectPolygon.clear();
 
     ui->confirmBox->hide();
-    mode = 0;
+    ui->adjustBox->hide();
+    mode = MODE_DEFAULT;
 }
 void MainWindow::on_btnCancel_pressed()
 {
@@ -699,6 +946,20 @@ void MainWindow::on_btnZoneGlobal_pressed()
     mode = MODE_ZONE_GLOBAL;
 }
 
+void MainWindow::on_btnAnimalSelect_pressed()
+{
+    ui->actionToolRectangle->trigger();
+    ui->confirmBox->show();
+    ui->actionAbrirVideo->setEnabled(false);
+    ui->actionToolCircle->setEnabled(false);
+    ui->actionToolLine->setEnabled(false);
+    ui->actionToolArrow->setEnabled(false);
+    ui->actionToolPolygon->setEnabled(false);
+
+    mode = MODE_ANIMAL_SELECT;
+}
+
+
 void MainWindow::on_btnSetBackground_pressed()
 {
     setBackground(ui->nSamples->value());
@@ -716,3 +977,4 @@ void MainWindow::on_btnEndTimeSetInstant_pressed()
 {
     ui->endTime->setTime(getVideoTime());
 }
+

@@ -1,9 +1,11 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#define MODE_DEFAULT     0
-#define MODE_MEASSURE    1
-#define MODE_ZONE_GLOBAL 2
+#define MODE_DEFAULT       0
+#define MODE_MEASSURE      1
+#define MODE_ZONE_GLOBAL   2
+#define MODE_ANIMAL_SELECT 3
+#define MODE_ANIMAL_EDIT   4
 
 #define SHAPE_RECTANGLE 0
 #define SHAPE_CIRCLE    1
@@ -45,6 +47,7 @@ public:
     QTime getVideoDuration();
     void setBackground(uint samples = 15);
     void setBackground(cv::Mat& frame);
+    int setThreshold();
 
 protected:
     void closeEvent(QCloseEvent *event);
@@ -84,16 +87,18 @@ private slots:
 
     void on_btnEndTimeSetInstant_pressed();
 
+    void on_btnAnimalSelect_pressed();
+
 private:
     Ui::MainWindow *ui;
     QGraphicsPixmapItem pixmap, pixmapAlternative, pixmapBackground;
     cv::VideoCapture video;
-    cv::Mat frame, background, maskZoneGlobal, trackImg;
+    cv::Mat frame, background, maskZoneGlobal, trackImg, animal;
     bool pause = 1;
     bool lock = 0;
 
     cv::Point selectPoints[2] = {cv::Point(0,0), cv::Point(0,0)};
-    std::vector<cv::Point> selectPolygon;
+    std::vector<cv::Point> selectPolygon, animalContour;
     bool flagSelectPoints = false;
     bool flagSelectPolygon = false, flagSelectPolygon2 = false;
     float pixelsPerMeter = 0;
