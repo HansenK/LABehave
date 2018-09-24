@@ -4,8 +4,9 @@
 #define MODE_DEFAULT       0
 #define MODE_MEASSURE      1
 #define MODE_ZONE_GLOBAL   2
-#define MODE_ANIMAL_SELECT 3
-#define MODE_ANIMAL_EDIT   4
+#define MODE_ZONE_ADD      3
+#define MODE_ANIMAL_SELECT 4
+#define MODE_ANIMAL_EDIT   5
 
 #define SHAPE_RECTANGLE 0
 #define SHAPE_CIRCLE    1
@@ -17,7 +18,17 @@
 #define TOOL_CIRCLE     3
 #define TOOL_POLYGON    4
 
+#define EV_ZONE_ENTRY 1
+#define EV_ZONE_EXIT  2
+#define EV_ZONE_PERM  3
+#define EV_DIST       4
+#define EV_IMOB       5
+#define EV_INAC       6
+#define EV_VEL        7
+
+
 #include <QMainWindow>
+#include <QFile>
 #include <QDebug>
 #include <QGraphicsScene>
 #include <QGraphicsPixmapItem>
@@ -27,8 +38,14 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QInputDialog>
+#include <QJsonDocument>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QListWidget>
 
 #include "opencv2/opencv.hpp"
+
+using namespace std;
 
 namespace Ui {
 class MainWindow;
@@ -39,45 +56,34 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
+    explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
-    explicit MainWindow(QWidget *parent = 0);
     cv::Point getFrameCursor(QGraphicsView& graphicsView, cv::Mat& frame);
     QTime getVideoTime();
     QTime getVideoDuration();
     void setBackground(uint samples = 15);
     void setBackground(cv::Mat& frame);
-    int setThreshold();
 
 protected:
     void closeEvent(QCloseEvent *event);
 
 private slots:
-    void on_startBtn_pressed();
+    void on_actionNewProject_triggered();
 
-    void on_actionAbrirVideo_triggered();
+    void on_btnNewProject_pressed();
 
-    void on_btnPlayPause_pressed();
+    bool on_actionOpenProject_triggered();
+
+    void on_btnLoadProject_pressed();
+
+    void on_actionOpenVideo_triggered();
+
+    void config();
+
+    void on_btnPlayPause_toggled(bool checked);
 
     void on_framePosSlider_sliderReleased();
-
-    void on_actionToolLine_triggered();
-
-    void on_actionToolArrow_triggered();
-
-    void on_actionToolRectangle_triggered();
-
-    void on_actionToolCircle_triggered();
-
-    void on_actionToolPolygon_triggered();
-
-    void on_btnMeassure_pressed();
-
-    void on_btnConfirm_pressed();
-
-    void on_btnCancel_pressed();
-
-    void on_btnZoneGlobal_pressed();
 
     void on_btnSetBackground_pressed();
 
@@ -89,11 +95,62 @@ private slots:
 
     void on_btnAnimalSelect_pressed();
 
+    void on_btnConfirm_pressed();
+
+    void on_btnCancel_pressed();
+
+    void on_actionToolRectangle_triggered();
+
+    void on_actionToolCircle_triggered();
+
+    void on_actionToolPolygon_triggered();
+
+    void on_startBtn_pressed();
+
+    void on_btnMeassure_pressed();
+
+    void on_actionToolArrow_triggered();
+
+    void on_btnZoneAdd_pressed();
+
+    void openProject(QString projectFileName);
+
+    void on_recentProjects_itemDoubleClicked(QListWidgetItem *item);
+
+    void on_btnZoneRemove_pressed();
+
+    void on_actionFinish_triggered();
+
+    void on_btnAddVideo_pressed();
+
+    void on_btnConfig_pressed();
+
+    void on_videoList_itemClicked();
+
+    void on_videoList_itemDoubleClicked();
+
+    void on_btnZoneMarkAll_pressed();
+
+    void on_btnZoneUnmarkAll_pressed();
+
+    void on_subEventSelect_currentIndexChanged(const QString &arg1);
+
+    void on_btnAddSubEvent_pressed();
+
+    void on_btnNewEvent_pressed();
+
 private:
     Ui::MainWindow *ui;
-    QGraphicsPixmapItem pixmap, pixmapAlternative, pixmapBackground;
+
+    // projeto
+    QString projectName;
+    QDir projectDir;
+
+
+    QGraphicsPixmapItem pixmap, pixmapPlayer, pixmapBackground;
     cv::VideoCapture video;
-    cv::Mat frame, background, maskZoneGlobal, trackImg, animal;
+    std::vector<QString> videoFiles;
+    cv::Mat frame, background, maskZoneGlobal, trackImg, animal, heatmap;
     bool pause = 1;
     bool lock = 0;
 
@@ -103,10 +160,37 @@ private:
     bool flagSelectPolygon = false, flagSelectPolygon2 = false;
     float pixelsPerMeter = 0;
 
-    struct zoneGlobal{
+    // eventos --------------------------------
+    struct subevent{
+        int type;
+        int intParam;
+        float floatParam;
+        string stringParam;
+    };
+
+    struct event{
+        QString name;                           // nome do evento
+        int subEventsCount;                     // contador de subeventos do evento
+        bool allowBetween;                      // permite outros subeventos
+        std::vector<struct subevent> subevents; // sequencia de subeventos
+        vector<float> t_start;                  // tempo de inicio do evento
+        vector<float> t_stop;                   // tempo de termino do evento
+    };
+
+    std::vector<struct event> events;
+
+    // zonas ----------------------------------
+    struct zone{
         uint type;
         std::vector<cv::Point> points;
-    }zoneGlobal;
+        cv::Mat zoneMat;
+        bool inZone;
+        int nEntry;
+        int nExit;
+    };
+    std::vector<struct zone> zones;
+    struct zone zoneGlobal; // zona de analise
+    // ----------------------------------------
 
     int mode = 0;
     int tool = -1;
