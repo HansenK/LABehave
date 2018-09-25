@@ -549,8 +549,8 @@ border-radius: 4px;
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>252</width>
-             <height>122</height>
+             <width>341</width>
+             <height>173</height>
             </rect>
            </property>
            <attribute name="label">
@@ -601,9 +601,9 @@ border-radius: 4px;
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>0</y>
-             <width>321</width>
-             <height>394</height>
+             <y>-53</y>
+             <width>324</width>
+             <height>226</height>
             </rect>
            </property>
            <attribute name="label">
@@ -672,84 +672,13 @@ border-radius: 4px;
               </layout>
              </widget>
             </item>
-            <item>
-             <widget class="QGroupBox" name="groupBox_6">
-              <property name="title">
-               <string>Zonas</string>
-              </property>
-              <layout class="QVBoxLayout" name="verticalLayout_19">
-               <item>
-                <layout class="QHBoxLayout" name="horizontalLayout_10">
-                 <item>
-                  <widget class="QCheckBox" name="checkBox_3">
-                   <property name="text">
-                    <string>Nº Entradas</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QCheckBox" name="checkBox_2">
-                   <property name="text">
-                    <string>Nº Saídas</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QCheckBox" name="checkBox">
-                   <property name="text">
-                    <string>Tempo Permanência</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-               <item>
-                <layout class="QHBoxLayout" name="horizontalLayout_11">
-                 <item>
-                  <widget class="QPushButton" name="btnZoneMarkAll">
-                   <property name="text">
-                    <string>Marcar Todas</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="btnZoneUnmarkAll">
-                   <property name="text">
-                    <string>Desmarcar Todas</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
-               </item>
-               <item>
-                <widget class="QListWidget" name="zonesResultList">
-                 <property name="minimumSize">
-                  <size>
-                   <width>0</width>
-                   <height>0</height>
-                  </size>
-                 </property>
-                 <property name="sizeAdjustPolicy">
-                  <enum>QAbstractScrollArea::AdjustToContents</enum>
-                 </property>
-                 <property name="editTriggers">
-                  <set>QAbstractItemView::NoEditTriggers</set>
-                 </property>
-                 <property name="alternatingRowColors">
-                  <bool>false</bool>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-            </item>
            </layout>
           </widget>
           <widget class="QWidget" name="page_7">
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>0</y>
+             <y>-222</y>
              <width>341</width>
              <height>489</height>
             </rect>
@@ -1174,7 +1103,7 @@ border-radius: 4px;
         <item>
          <widget class="QTabWidget" name="resultTabs">
           <property name="currentIndex">
-           <number>0</number>
+           <number>2</number>
           </property>
           <widget class="QWidget" name="tab">
            <attribute name="title">
@@ -1182,7 +1111,44 @@ border-radius: 4px;
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_13">
             <item>
-             <widget class="QTableWidget" name="tableWidget"/>
+             <layout class="QHBoxLayout" name="horizontalLayout_13">
+              <item>
+               <widget class="QLabel" name="label_2">
+                <property name="text">
+                 <string>Eventos:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QComboBox" name="eventResultSelect">
+                <property name="minimumSize">
+                 <size>
+                  <width>300</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="currentText">
+                 <string/>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_2">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <widget class="QTableWidget" name="eventResultTable"/>
             </item>
            </layout>
           </widget>
@@ -1266,6 +1232,11 @@ border-radius: 4px;
            <attribute name="title">
             <string>Gráficos</string>
            </attribute>
+           <layout class="QVBoxLayout" name="verticalLayout_19">
+            <item>
+             <widget class="QCustomPlot" name="graphVel" native="true"/>
+            </item>
+           </layout>
           </widget>
          </widget>
         </item>
@@ -1473,6 +1444,14 @@ border-radius: 4px;
   </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
+ <customwidgets>
+  <customwidget>
+   <class>QCustomPlot</class>
+   <extends>QWidget</extends>
+   <header>qcustomplot.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="resources.qrc"/>
  </resources>

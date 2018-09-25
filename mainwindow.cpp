@@ -22,7 +22,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->tabWidget->setTabEnabled(1,false);
     ui->tabWidget->setTabEnabled(2,false);
     ui->tabWidget->setTabEnabled(3,false);
-    ui->tabWidget->setTabEnabled(4,false);
+    //ui->tabWidget->setTabEnabled(4,false);
 
     ui->btnConfig->setEnabled(false);
     ui->meassureResultBox->setEnabled(false);
@@ -52,6 +52,9 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->subEventSelect->addItem("Selecione");
     ui->subEventSelect->addItem("Entrada em Zona");
     ui->subEventSelect->addItem("Saída de Zona");
+
+    ui->eventResultTable->setColumnCount(3);
+    ui->eventResultTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 
     //*** PROJETOS NO DIRETORIO RAIZ ***//
     QDir rootDir("C:/LABEHAVE");
@@ -141,14 +144,16 @@ void sortContours(vector<vector<Point>>& contours){
 Point MainWindow::getFrameCursor(QGraphicsView& graphicsView, Mat& frame){
     QPoint qp = graphicsView.mapFromGlobal(QPoint(QCursor::pos()));
     int    DX = frame.cols,
-           dx = (float)graphicsView.width(),
+           dx = graphicsView.width(),
            DY = frame.rows,
-           dy = (float)graphicsView.height();
-    float  pmx = (float)DX/(float)dx,
-           pmy = (float)DY/(float)dy;
+           dy = graphicsView.height();
+    float  pmx = static_cast<float>(DX)/static_cast<float>(dx),
+           pmy = static_cast<float>(DY)/static_cast<float>(dy);
 
-    if(DY>DX) pmx *= ((float)DY*(float)dx)/((float)DX*(float)dy);
-    else      pmy /= ((float)DY*(float)dx)/((float)DX*(float)dy);
+    if(DY>DX) pmx *= (static_cast<float>(DY)*static_cast<float>(dx))/
+                     (static_cast<float>(DX)*static_cast<float>(dy));
+    else      pmy /= (static_cast<float>(DY)*static_cast<float>(dx))/
+                     (static_cast<float>(DX)*static_cast<float>(dy));
 
     Point p = Point( qp.x()*pmx + ((float)DX/2 - (float)dx*pmx/2) ,
                      qp.y()*pmy + ((float)DY/2 - (float)dy*pmy/2) );
@@ -505,8 +510,15 @@ void MainWindow::on_startBtn_pressed()
 
     video.set(CAP_PROP_POS_FRAMES, startFrame);
 
-    // Zonas ----------------------------------------------
+    // Eventos ----------------------------------------------
     int countIn = -1;
+    for(uint i=0; i<events.size(); i++){
+        if(events[i].name.isEmpty()){
+            events.pop_back();
+            break;
+        }
+        ui->eventResultSelect->addItem(events[i].name);
+    }
 
     // Mapas ----------------------------------------------
     if(ui->checkCreateTrackMap->isChecked())
@@ -514,6 +526,27 @@ void MainWindow::on_startBtn_pressed()
 
     if(ui->checkCreateHeatMap->isChecked())
         ui->viewSelector->addItem("heatmap");
+
+    // Graficos -------------------------------------------
+    QVector<double> vel_x(video.get(CAP_PROP_FRAME_COUNT)), vel_y(video.get(CAP_PROP_FRAME_COUNT));
+    for (int i=0; i<video.get(CAP_PROP_FRAME_COUNT); ++i)
+    {
+      vel_x[i] = i;
+      vel_y[i] = 0;
+    }
+    // create graph and assign data to it:
+    ui->graphVel->addGraph();
+    ui->graphVel->graph(0)->setData(vel_x, vel_y);
+    ui->graphVel->graph(0)->setPen(QPen(Qt::blue));
+    ui->graphVel->graph(0)->setBrush(QBrush(QColor(0, 0, 255, 150)));
+    // give the axes some labels:
+    ui->graphVel->xAxis->setLabel("tempo");
+    ui->graphVel->yAxis->setLabel("velocidade");
+    // set axes ranges, so we see all data:
+    ui->graphVel->xAxis->setRange(0, video.get(CAP_PROP_FRAME_COUNT));
+    ui->graphVel->yAxis->setRange(0, 1);
+    ui->graphVel->replot();
+
     // ----------------------------------------------------
 
     ui->progressBar->setMinimum(startFrame);
@@ -749,7 +782,7 @@ void MainWindow::on_startBtn_pressed()
                     if(sEv.type == EV_ZONE_ENTRY){
                         if(inZone(frame2, zones[sEv.intParam].zoneMat) && !zones[sEv.intParam].inZone){
                             if(events[i].subEventsCount == 0)
-                                events[i].t_start.push_back(video.get(CAP_PROP_FPS)/video.get(CAP_PROP_FRAME_COUNT));
+                                events[i].t_start.push_back(video.get(CAP_PROP_POS_FRAMES)/video.get(CAP_PROP_FPS));
 
                             events[i].subEventsCount++;
                         }
@@ -757,7 +790,7 @@ void MainWindow::on_startBtn_pressed()
                     if(sEv.type == EV_ZONE_EXIT){
                         if(!inZone(frame2, zones[sEv.intParam].zoneMat) && zones[sEv.intParam].inZone){
                             if(events[i].subEventsCount == 0)
-                                events[i].t_start.push_back(video.get(CAP_PROP_FPS)/video.get(CAP_PROP_FRAME_COUNT));
+                                events[i].t_start.push_back(video.get(CAP_PROP_POS_FRAMES)/video.get(CAP_PROP_FPS));
 
                             events[i].subEventsCount++;
                         }
@@ -767,11 +800,9 @@ void MainWindow::on_startBtn_pressed()
                         events[i].subEventsCount = 0;
 
                         // indica que o evento ocorreu
-                        events[i].t_stop.push_back(video.get(CAP_PROP_FPS)/video.get(CAP_PROP_FRAME_COUNT));
+                        events[i].t_stop.push_back(video.get(CAP_PROP_POS_FRAMES)/video.get(CAP_PROP_FPS));
                     }
                 }
-
-                ui->statusBar->showMessage(QString::number(events[0].t_start.size()));
 
                 //zonas
                 if(countIn == -1){
@@ -899,7 +930,15 @@ void MainWindow::on_startBtn_pressed()
                     if(velPts.size() > maxVelPts){
                         velPts.erase(velPts.begin());
                         currentVel = norm(velPts[0] - velPts[velPts.size()-1]);
-                        if(currentVel > maxVel) maxVel = currentVel;
+                        if(currentVel > maxVel){
+                            maxVel = currentVel;
+                            //atualiza a faixa Y do grafico
+                            ui->graphVel->yAxis->setRange(0, maxVel);
+                        }
+                        //atualiza o grafico
+                        vel_y[video.get(CAP_PROP_POS_FRAMES)] = currentVel;
+                        ui->graphVel->graph(0)->setData(vel_x, vel_y);
+                        ui->graphVel->replot();
                     }
                     ui->maxVelLabel->setText(QString::number(maxVel/pixelsPerMeter) + " m/s");
                     ui->currentVelLabel->setText(QString::number(currentVel/pixelsPerMeter) + " m/s");
@@ -984,6 +1023,12 @@ void MainWindow::on_actionFinish_triggered()
     // Abre a aba de resultados
     ui->tabWidget->setTabEnabled(4, true);
     ui->tabWidget->setCurrentIndex(4);
+
+
+    if(!events.empty()){
+        ui->eventResultSelect->setCurrentIndex(0);
+        MainWindow::on_eventResultSelect_currentIndexChanged(0);
+    }
 }
 
 // Impede o programa de fechar caso o video ainda esteja em execucao
@@ -1123,11 +1168,6 @@ void MainWindow::on_btnConfirm_pressed()
         ui->zoneList->addItem(new QListWidgetItem(QIcon(zonePixThumb.pixmap()),
                                                    "Zona " + QString::number(zones.size())));
 
-        // Lista de zonas (resultado)
-        QListWidgetItem* item = new QListWidgetItem("Zona " + QString::number(zones.size()));
-        item->setFlags(item->flags() | Qt::ItemIsUserCheckable); // set checkable flag
-        item->setCheckState(Qt::Unchecked); // AND initialize check state
-        ui->zonesResultList->addItem(item);
     }
 
     if(mode == MODE_ANIMAL_SELECT){
@@ -1247,26 +1287,12 @@ void MainWindow::on_btnZoneRemove_pressed()
     if(!zones.empty() && ui->zoneList->isItemSelected(ui->zoneList->currentItem())){
         zones.erase(zones.begin() + ui->zoneList->currentRow());
         ui->zoneList->removeItemWidget(ui->zoneList->currentItem());
-        ui->zonesResultList->removeItemWidget(ui->zoneList->currentItem());
         delete ui->zoneList->currentItem();
-        delete ui->zonesResultList->item(ui->zoneList->currentRow());
         for(uint i=0; i<zones.size(); i++){
             ui->zoneList->item(i)->setText("Zona " + QString::number(i + 1));
-            ui->zonesResultList->item(i)->setText("Zona " + QString::number(i + 1));
         }
     }
 }
-void MainWindow::on_btnZoneMarkAll_pressed()
-{
-    for(uint i=0; i<zones.size(); i++)
-        ui->zonesResultList->item(i)->setCheckState(Qt::Checked);
-}
-void MainWindow::on_btnZoneUnmarkAll_pressed()
-{
-    for(uint i=0; i<zones.size(); i++)
-        ui->zonesResultList->item(i)->setCheckState(Qt::Unchecked);
-}
-
 
 //*** EVENTOS ***//
 void MainWindow::on_subEventSelect_currentIndexChanged(const QString &arg1)
@@ -1328,5 +1354,23 @@ void MainWindow::on_btnNewEvent_pressed()
 
         events[events.size()-1].allowBetween = !ui->checkAllowEventBetween->isChecked();
         ui->eventList->addItem(events[events.size()-1].name);
+    }
+}
+
+void MainWindow::on_eventResultSelect_currentIndexChanged(int index)
+{
+    ui->eventResultTable->clear(); //limpa a tabela de resultados
+    ui->eventResultTable->setRowCount(0);
+    ui->eventResultTable->setHorizontalHeaderItem(0, new QTableWidgetItem("Início"));
+    ui->eventResultTable->setHorizontalHeaderItem(1, new QTableWidgetItem("Fim"));
+    ui->eventResultTable->setHorizontalHeaderItem(2, new QTableWidgetItem("Duração"));
+
+    for(uint i=0; i<events[index].t_stop.size(); i++){
+        ui->eventResultTable->insertRow(i);
+
+        ui->eventResultTable->setItem(i, 0, new QTableWidgetItem(QString::number(events[index].t_start[i]) + " s"));
+        ui->eventResultTable->setItem(i, 1, new QTableWidgetItem(QString::number(events[index].t_stop[i]) + " s"));
+        ui->eventResultTable->setItem(i, 2, new QTableWidgetItem(QString::number(events[index].t_stop[i]
+                                                                               - events[index].t_start[i]) + " s"));
     }
 }

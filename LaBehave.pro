@@ -6,7 +6,7 @@
 
 QT       += core gui
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport
 
 TARGET = LaBehave
 TEMPLATE = app
@@ -26,7 +26,8 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
         mainwindow.cpp \
-    background.cpp
+    background.cpp \
+    qcustomplot.cpp
 
 INCLUDEPATH += C:/TCC/OpenCV/install/include
 
@@ -45,7 +46,8 @@ LIBS += -LC:\\TCC\\OpenCV\\bin \
     libopencv_videoio400d \
 
 HEADERS += \
-        mainwindow.h
+        mainwindow.h \
+    qcustomplot.h
 
 FORMS += \
         mainwindow.ui

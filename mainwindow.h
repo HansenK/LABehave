@@ -129,15 +129,13 @@ private slots:
 
     void on_videoList_itemDoubleClicked();
 
-    void on_btnZoneMarkAll_pressed();
-
-    void on_btnZoneUnmarkAll_pressed();
-
     void on_subEventSelect_currentIndexChanged(const QString &arg1);
 
     void on_btnAddSubEvent_pressed();
 
     void on_btnNewEvent_pressed();
+
+    void on_eventResultSelect_currentIndexChanged(int index);
 
 private:
     Ui::MainWindow *ui;
