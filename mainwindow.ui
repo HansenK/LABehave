@@ -31,7 +31,7 @@
        <string notr="true"/>
       </property>
       <property name="currentIndex">
-       <number>4</number>
+       <number>3</number>
       </property>
       <widget class="QWidget" name="tab1">
        <attribute name="title">
@@ -549,8 +549,8 @@ border-radius: 4px;
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>341</width>
-             <height>173</height>
+             <width>252</width>
+             <height>122</height>
             </rect>
            </property>
            <attribute name="label">
@@ -601,8 +601,8 @@ border-radius: 4px;
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>-53</y>
-             <width>324</width>
+             <y>0</y>
+             <width>202</width>
              <height>226</height>
             </rect>
            </property>
@@ -678,7 +678,7 @@ border-radius: 4px;
            <property name="geometry">
             <rect>
              <x>0</x>
-             <y>-222</y>
+             <y>0</y>
              <width>341</width>
              <height>489</height>
             </rect>
@@ -889,7 +889,7 @@ border-radius: 4px;
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout_5">
              <item>
-              <widget class="QPushButton" name="pushButton_6">
+              <widget class="QPushButton" name="stopBtn">
                <property name="text">
                 <string>Interromper Análise</string>
                </property>
@@ -1103,7 +1103,7 @@ border-radius: 4px;
         <item>
          <widget class="QTabWidget" name="resultTabs">
           <property name="currentIndex">
-           <number>2</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="tab">
            <attribute name="title">
@@ -1234,7 +1234,29 @@ border-radius: 4px;
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_19">
             <item>
-             <widget class="QCustomPlot" name="graphVel" native="true"/>
+             <widget class="QScrollArea" name="scrollArea_2">
+              <property name="widgetResizable">
+               <bool>true</bool>
+              </property>
+              <widget class="QWidget" name="scrollAreaWidgetContents_2">
+               <property name="geometry">
+                <rect>
+                 <x>0</x>
+                 <y>0</y>
+                 <width>663</width>
+                 <height>290</height>
+                </rect>
+               </property>
+               <layout class="QVBoxLayout" name="verticalLayout_26">
+                <item>
+                 <widget class="QCustomPlot" name="graphVel" native="true"/>
+                </item>
+                <item>
+                 <widget class="QCustomPlot" name="graphEvents" native="true"/>
+                </item>
+               </layout>
+              </widget>
+             </widget>
             </item>
            </layout>
           </widget>

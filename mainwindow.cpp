@@ -155,8 +155,8 @@ Point MainWindow::getFrameCursor(QGraphicsView& graphicsView, Mat& frame){
     else      pmy /= (static_cast<float>(DY)*static_cast<float>(dx))/
                      (static_cast<float>(DX)*static_cast<float>(dy));
 
-    Point p = Point( qp.x()*pmx + ((float)DX/2 - (float)dx*pmx/2) ,
-                     qp.y()*pmy + ((float)DY/2 - (float)dy*pmy/2) );
+    Point p = Point( qp.x()*pmx + (static_cast<float>(DX)/2 - static_cast<float>(dx)*pmx/2) ,
+                     qp.y()*pmy + (static_cast<float>(DY)/2 - static_cast<float>(dy)*pmy/2) );
 
     if      (p.x > DX) p.x = DX;
     else if (p.x <  0) p.x =  0;
@@ -490,6 +490,7 @@ void MainWindow::on_startBtn_pressed()
     }
 
     video.open(videoFiles[ui->videoList->currentRow()].toStdString());
+    int video_fps = video.get(CAP_PROP_FPS);
 
     ui->tabWidget->setTabEnabled(3,true);
     ui->tabWidget->setCurrentIndex(3);
@@ -505,8 +506,8 @@ void MainWindow::on_startBtn_pressed()
                          ui->endTime->time().minute() * 60 +
                          ui->endTime->time().second();
 
-    startFrame = startTimeSecs * video.get(CAP_PROP_FPS);
-    endFrame = endTimeSecs     * video.get(CAP_PROP_FPS);
+    startFrame = startTimeSecs * video_fps;
+    endFrame = endTimeSecs     * video_fps;
 
     video.set(CAP_PROP_POS_FRAMES, startFrame);
 
@@ -528,24 +529,50 @@ void MainWindow::on_startBtn_pressed()
         ui->viewSelector->addItem("heatmap");
 
     // Graficos -------------------------------------------
+
+    //velocidade
     QVector<double> vel_x(video.get(CAP_PROP_FRAME_COUNT)), vel_y(video.get(CAP_PROP_FRAME_COUNT));
     for (int i=0; i<video.get(CAP_PROP_FRAME_COUNT); ++i)
     {
-      vel_x[i] = i;
+      vel_x[i] = static_cast<double>(i)/video_fps;
       vel_y[i] = 0;
     }
-    // create graph and assign data to it:
     ui->graphVel->addGraph();
     ui->graphVel->graph(0)->setData(vel_x, vel_y);
     ui->graphVel->graph(0)->setPen(QPen(Qt::blue));
     ui->graphVel->graph(0)->setBrush(QBrush(QColor(0, 0, 255, 150)));
-    // give the axes some labels:
-    ui->graphVel->xAxis->setLabel("tempo");
-    ui->graphVel->yAxis->setLabel("velocidade");
-    // set axes ranges, so we see all data:
-    ui->graphVel->xAxis->setRange(0, video.get(CAP_PROP_FRAME_COUNT));
-    ui->graphVel->yAxis->setRange(0, 1);
+    ui->graphVel->xAxis->setLabel("tempo (s)");
+    ui->graphVel->yAxis->setLabel("velocidade (m/s)");
+    ui->graphVel->xAxis->setRange(startTimeSecs, endTimeSecs + 1);
+    ui->graphVel->yAxis->setRange(0, 0);
+    ui->graphVel->setInteraction(QCP::iRangeDrag, true);
+    ui->graphVel->setInteraction(QCP::iRangeZoom, true);
     ui->graphVel->replot();
+
+    //eventos
+    QVector<double> ev_x(static_cast<int>(events.size())), ev_y(static_cast<int>(events.size()) + 1);
+    int maxEvOcurr = 0;
+
+    for (int i=0; i<static_cast<int>(events.size()); i++)
+    {
+        ui->graphEvents->addGraph();
+        ui->graphEvents->graph(i)->setName(QString::number(i) + ": " + events[i].name);
+        ui->graphEvents->graph(i)->setVisible(false);
+        ev_x[i] = i+1;
+        ev_y[i] = 0;
+    }
+
+    ui->graphEvents->xAxis->setLabel("Eventos");
+    ui->graphEvents->yAxis->setLabel("Ocorrencias");
+    ui->graphEvents->xAxis->setRange(0, static_cast<int>(events.size()) + 1);
+    ui->graphEvents->yAxis->setRange(0, 0);
+
+    QCPBars *evBars = new QCPBars(ui->graphEvents->xAxis, ui->graphEvents->yAxis);
+    evBars->setData(ev_x, ev_y);
+    evBars->setWidth(0.3);
+    evBars->setBrush(QBrush(QColor(255, 0, 0, 150)));
+    ui->graphEvents->legend->setVisible(true);
+    ui->graphEvents->replot();
 
     // ----------------------------------------------------
 
@@ -586,7 +613,7 @@ void MainWindow::on_startBtn_pressed()
     vector<float> area;
 
     //velocidade
-    const uint maxVelPts = video.get(CAP_PROP_FPS);
+    const uint maxVelPts = video_fps;
     vector<Point> velPts;
     float currentVel = 0.0, maxVel = 0;
 
@@ -776,13 +803,13 @@ void MainWindow::on_startBtn_pressed()
                 }
 
                 //eventos
-                for(uint i=0; i<events.size(); i++){
+                for(int i=0; i<events.size(); i++){
                     struct subevent sEv = events[i].subevents[events[i].subEventsCount];
 
                     if(sEv.type == EV_ZONE_ENTRY){
                         if(inZone(frame2, zones[sEv.intParam].zoneMat) && !zones[sEv.intParam].inZone){
                             if(events[i].subEventsCount == 0)
-                                events[i].t_start.push_back(video.get(CAP_PROP_POS_FRAMES)/video.get(CAP_PROP_FPS));
+                                events[i].t_start.push_back(video.get(CAP_PROP_POS_FRAMES)/video_fps);
 
                             events[i].subEventsCount++;
                         }
@@ -790,7 +817,7 @@ void MainWindow::on_startBtn_pressed()
                     if(sEv.type == EV_ZONE_EXIT){
                         if(!inZone(frame2, zones[sEv.intParam].zoneMat) && zones[sEv.intParam].inZone){
                             if(events[i].subEventsCount == 0)
-                                events[i].t_start.push_back(video.get(CAP_PROP_POS_FRAMES)/video.get(CAP_PROP_FPS));
+                                events[i].t_start.push_back(video.get(CAP_PROP_POS_FRAMES)/video_fps);
 
                             events[i].subEventsCount++;
                         }
@@ -800,7 +827,14 @@ void MainWindow::on_startBtn_pressed()
                         events[i].subEventsCount = 0;
 
                         // indica que o evento ocorreu
-                        events[i].t_stop.push_back(video.get(CAP_PROP_POS_FRAMES)/video.get(CAP_PROP_FPS));
+                        events[i].t_stop.push_back(video.get(CAP_PROP_POS_FRAMES)/video_fps);
+                        // atualiza o grafico de eventos
+                        if(++ev_y[i] > maxEvOcurr)
+                            maxEvOcurr = ev_y[i];
+                        ui->graphEvents->yAxis->setRange(0, maxEvOcurr);
+                        ui->graphEvents->graph(0)->setData(ev_x, ev_y);
+                        evBars->setData(ev_x, ev_y);
+                        ui->graphEvents->replot();
                     }
                 }
 
@@ -929,19 +963,19 @@ void MainWindow::on_startBtn_pressed()
                     velPts.push_back(pts[0][pts[0].size()-1]);
                     if(velPts.size() > maxVelPts){
                         velPts.erase(velPts.begin());
-                        currentVel = norm(velPts[0] - velPts[velPts.size()-1]);
+                        if(isCalibrated) currentVel = norm(velPts[0] - velPts[velPts.size()-1])/pixelsPerMeter;
                         if(currentVel > maxVel){
                             maxVel = currentVel;
                             //atualiza a faixa Y do grafico
                             ui->graphVel->yAxis->setRange(0, maxVel);
                         }
                         //atualiza o grafico
-                        vel_y[video.get(CAP_PROP_POS_FRAMES)] = currentVel;
+                        vel_y[video.get(CAP_PROP_POS_FRAMES) - 1] = currentVel;
                         ui->graphVel->graph(0)->setData(vel_x, vel_y);
                         ui->graphVel->replot();
                     }
-                    ui->maxVelLabel->setText(QString::number(maxVel/pixelsPerMeter) + " m/s");
-                    ui->currentVelLabel->setText(QString::number(currentVel/pixelsPerMeter) + " m/s");
+                    ui->maxVelLabel->setText(QString::number(maxVel) + " m/s");
+                    ui->currentVelLabel->setText(QString::number(currentVel) + " m/s");
                 }
 
 
@@ -974,15 +1008,10 @@ void MainWindow::on_startBtn_pressed()
             // Fim da analise
             if(video.get(CAP_PROP_POS_FRAMES) == endFrame){
                 video.release();
-                ui->startBtn->setText("Reiniciar Análise");
                 ui->actionFinish->trigger();
             }
 
-            // reseta a trajetoria
-            //if(ui->btnResetTrack->isDown()){
-            //    for(int i=0; i<nPts; i++)
-            //        pts[i].clear();
-            //}
+
         }
         qApp->processEvents();
         /*while(ui->pauseBtn->isChecked()){
