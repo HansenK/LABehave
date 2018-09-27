@@ -150,7 +150,7 @@ Point MainWindow::getFrameCursor(QGraphicsView& graphicsView, Mat& frame){
     float  pmx = static_cast<float>(DX)/static_cast<float>(dx),
            pmy = static_cast<float>(DY)/static_cast<float>(dy);
 
-    if(DY>DX) pmx *= (static_cast<float>(DY)*static_cast<float>(dx))/
+    if(DY<DX) pmx *= (static_cast<float>(DY)*static_cast<float>(dx))/
                      (static_cast<float>(DX)*static_cast<float>(dy));
     else      pmy /= (static_cast<float>(DY)*static_cast<float>(dx))/
                      (static_cast<float>(DX)*static_cast<float>(dy));
@@ -496,7 +496,7 @@ void MainWindow::on_startBtn_pressed()
     ui->tabWidget->setCurrentIndex(3);
 
     if(ui->checkShowDistance->isChecked()) ui->distanceBox->show();
-    ui->tabWidget->setTabEnabled(2, false);
+    //ui->tabWidget->setTabEnabled(2, false);
 
     // frames de inicio e termino -------------------------
     uint startTimeSecs = ui->startTime->time().hour()   * 3600 +
@@ -522,8 +522,8 @@ void MainWindow::on_startBtn_pressed()
     }
 
     // Mapas ----------------------------------------------
-    if(ui->checkCreateTrackMap->isChecked())
-        ui->viewSelector->addItem("trajeto");
+    //if(ui->checkCreateTrackMap->isChecked())
+        //ui->viewSelector->addItem("trajeto");
 
     if(ui->checkCreateHeatMap->isChecked())
         ui->viewSelector->addItem("heatmap");
@@ -556,7 +556,7 @@ void MainWindow::on_startBtn_pressed()
     for (int i=0; i<static_cast<int>(events.size()); i++)
     {
         ui->graphEvents->addGraph();
-        ui->graphEvents->graph(i)->setName(QString::number(i) + ": " + events[i].name);
+        ui->graphEvents->graph(i)->setName(QString::number(i + 1) + ": " + events[i].name);
         ui->graphEvents->graph(i)->setVisible(false);
         ev_x[i] = i+1;
         ev_y[i] = 0;
@@ -573,6 +573,31 @@ void MainWindow::on_startBtn_pressed()
     evBars->setBrush(QBrush(QColor(255, 0, 0, 150)));
     ui->graphEvents->legend->setVisible(true);
     ui->graphEvents->replot();
+
+    //zonas - tempo de permanencia
+    QVector<double> zperm_x(static_cast<int>(zones.size())), zperm_y(static_cast<int>(zones.size()) + 1);
+    float maxZonePermTime = 0;
+
+    for (int i=0; i<static_cast<int>(zones.size()); i++)
+    {
+        ui->graphZonePermTime->addGraph();
+        ui->graphZonePermTime->graph(i)->setName("Zona " + QString::number(i+1));
+        ui->graphZonePermTime->graph(i)->setVisible(false);
+        zperm_x[i] = i+1;
+        zperm_y[i] = 0;
+    }
+
+    ui->graphZonePermTime->xAxis->setLabel("Zonas");
+    ui->graphZonePermTime->yAxis->setLabel("Tempo (s)");
+    ui->graphZonePermTime->xAxis->setRange(0, static_cast<int>(zones.size()) + 1);
+    ui->graphZonePermTime->yAxis->setRange(0, 0);
+
+    QCPBars *zpermBars = new QCPBars(ui->graphZonePermTime->xAxis, ui->graphZonePermTime->yAxis);
+    zpermBars->setData(zperm_x, zperm_y);
+    zpermBars->setWidth(0.3);
+    zpermBars->setBrush(QBrush(QColor(0, 255, 0, 150)));
+    ui->graphZonePermTime->legend->setVisible(true);
+    ui->graphZonePermTime->replot();
 
     // ----------------------------------------------------
 
@@ -635,6 +660,9 @@ void MainWindow::on_startBtn_pressed()
 
         if(!frame.empty())
         {
+            // Instante atual
+            float currentTime = video.get(CAP_PROP_POS_FRAMES) / video_fps;
+
             if(!smallObjectArea) smallObjectArea = (frame.rows*frame.cols)*0.003;
             frame.copyTo(frame2, maskZoneGlobal);
 
@@ -809,7 +837,7 @@ void MainWindow::on_startBtn_pressed()
                     if(sEv.type == EV_ZONE_ENTRY){
                         if(inZone(frame2, zones[sEv.intParam].zoneMat) && !zones[sEv.intParam].inZone){
                             if(events[i].subEventsCount == 0)
-                                events[i].t_start.push_back(video.get(CAP_PROP_POS_FRAMES)/video_fps);
+                                events[i].t_start.push_back(currentTime);
 
                             events[i].subEventsCount++;
                         }
@@ -817,7 +845,7 @@ void MainWindow::on_startBtn_pressed()
                     if(sEv.type == EV_ZONE_EXIT){
                         if(!inZone(frame2, zones[sEv.intParam].zoneMat) && zones[sEv.intParam].inZone){
                             if(events[i].subEventsCount == 0)
-                                events[i].t_start.push_back(video.get(CAP_PROP_POS_FRAMES)/video_fps);
+                                events[i].t_start.push_back(currentTime);
 
                             events[i].subEventsCount++;
                         }
@@ -827,7 +855,7 @@ void MainWindow::on_startBtn_pressed()
                         events[i].subEventsCount = 0;
 
                         // indica que o evento ocorreu
-                        events[i].t_stop.push_back(video.get(CAP_PROP_POS_FRAMES)/video_fps);
+                        events[i].t_stop.push_back(currentTime);
                         // atualiza o grafico de eventos
                         if(++ev_y[i] > maxEvOcurr)
                             maxEvOcurr = ev_y[i];
@@ -844,9 +872,11 @@ void MainWindow::on_startBtn_pressed()
 
                     for(uint i=0; i<zones.size(); i++){
                         if(inZone(frame2, zones[i].zoneMat)){
+                              //cobaia ja esta na zona
                               zones[i].inZone = true;
+                              zones[i].lastEntryTime = currentTime;
                               countIn++;
-                        }else zones[i].inZone = false;
+                        }else zones[i].inZone = false; //cobaia esta fora da zona
                     }
                 }else{
                     for(uint i=0; i<zones.size(); i++){
@@ -854,12 +884,25 @@ void MainWindow::on_startBtn_pressed()
                         if(inZone(frame2, zones[i].zoneMat) && !zones[i].inZone){
                             zones[i].nEntry++;
                             zones[i].inZone = true;
+                            zones[i].lastEntryTime = currentTime;
                         }
                         //saida
                         if(!inZone(frame2, zones[i].zoneMat) && zones[i].inZone){
                             zones[i].nExit++;
                             zones[i].inZone = false;
+                            zones[i].permTime += currentTime - zones[i].lastEntryTime;
+
+                            zperm_y[i] = zones[i].permTime;
+                            if(zones[i].permTime > maxZonePermTime){
+                                maxZonePermTime = zones[i].permTime;
+                                ui->graphZonePermTime->yAxis->setRange(0, maxZonePermTime);
+                            }
+
+                            //atualiza o grafico de permanencia em zonas
+                            zpermBars->setData(zperm_x, zperm_y);
+                            ui->graphZonePermTime->replot();
                         }
+
                     }
                 }
                 // mostrar zonas
@@ -1006,12 +1049,26 @@ void MainWindow::on_startBtn_pressed()
             // -----------------------------------------------------------------------------------------------
 
             // Fim da analise
-            if(video.get(CAP_PROP_POS_FRAMES) == endFrame){
+            if(video.get(CAP_PROP_POS_FRAMES) == endFrame || ui->stopBtn->isDown()){
+
+                for(uint i=0; i<zones.size(); i++){
+                    zones[i].permTime += currentTime - zones[i].lastEntryTime;
+
+                    zperm_y[i] = zones[i].permTime;
+                    if(zones[i].permTime > maxZonePermTime){
+                        maxZonePermTime = zones[i].permTime;
+                        ui->graphZonePermTime->yAxis->setRange(0, maxZonePermTime);
+                    }
+                }
+                //atualiza o grafico de permanencia em zonas
+                zpermBars->setData(zperm_x, zperm_y);
+                ui->graphZonePermTime->replot();
+
                 video.release();
                 ui->actionFinish->trigger();
+
+                QMessageBox::warning(this, "Fim da análise", "O processo de análise foi concluído");
             }
-
-
         }
         qApp->processEvents();
         /*while(ui->pauseBtn->isChecked()){
@@ -1064,8 +1121,15 @@ void MainWindow::on_actionFinish_triggered()
 void MainWindow::closeEvent(QCloseEvent *event)
 {
     if(video.isOpened() && lock){
-        QMessageBox::warning(this, "Atenção", "Pare a análise antes de fechar o programa!");
-        event->ignore();
+        QMessageBox::StandardButton reply;
+        reply = QMessageBox::question(this, "Atenção!", "Deseja mesmo sair do programa?",
+                              QMessageBox::Yes|QMessageBox::No);
+
+        if (reply == QMessageBox::Yes){
+            video.release();
+            event->accept();
+        }
+        else event->ignore();
     }else{
         video.release();
         event->accept();
@@ -1156,6 +1220,7 @@ void MainWindow::on_btnConfirm_pressed()
         temp_zone.zoneMat.create(frame.size(), CV_8UC1);
         temp_zone.zoneMat = Scalar::all(0);
         temp_zone.nEntry = temp_zone.nExit = 0;
+        temp_zone.permTime = 0;
 
         if(tool == TOOL_POLYGON){
             temp_zone.type = SHAPE_POLYGON;

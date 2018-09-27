@@ -170,7 +170,7 @@ private:
         QString name;                           // nome do evento
         int subEventsCount;                     // contador de subeventos do evento
         bool allowBetween;                      // permite outros subeventos
-        std::vector<struct subevent> subevents; // sequencia de subeventos
+        vector<struct subevent> subevents; // sequencia de subeventos
         vector<float> t_start;                  // tempo de inicio do evento
         vector<float> t_stop;                   // tempo de termino do evento
     };
@@ -185,6 +185,8 @@ private:
         bool inZone;
         int nEntry;
         int nExit;
+        float lastEntryTime;
+        float permTime;
     };
     std::vector<struct zone> zones;
     struct zone zoneGlobal; // zona de analise

@@ -31,7 +31,7 @@
        <string notr="true"/>
       </property>
       <property name="currentIndex">
-       <number>3</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab1">
        <attribute name="title">
@@ -1103,7 +1103,7 @@ border-radius: 4px;
         <item>
          <widget class="QTabWidget" name="resultTabs">
           <property name="currentIndex">
-           <number>0</number>
+           <number>1</number>
           </property>
           <widget class="QWidget" name="tab">
            <attribute name="title">
@@ -1242,17 +1242,68 @@ border-radius: 4px;
                <property name="geometry">
                 <rect>
                  <x>0</x>
-                 <y>0</y>
-                 <width>663</width>
-                 <height>290</height>
+                 <y>-439</y>
+                 <width>646</width>
+                 <height>729</height>
                 </rect>
                </property>
                <layout class="QVBoxLayout" name="verticalLayout_26">
                 <item>
-                 <widget class="QCustomPlot" name="graphVel" native="true"/>
+                 <widget class="QGroupBox" name="groupBox_6">
+                  <property name="title">
+                   <string>Velocidade</string>
+                  </property>
+                  <layout class="QVBoxLayout" name="verticalLayout_27">
+                   <item>
+                    <widget class="QCustomPlot" name="graphVel" native="true">
+                     <property name="minimumSize">
+                      <size>
+                       <width>0</width>
+                       <height>200</height>
+                      </size>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
                 </item>
                 <item>
-                 <widget class="QCustomPlot" name="graphEvents" native="true"/>
+                 <widget class="QGroupBox" name="groupBox_8">
+                  <property name="title">
+                   <string>Eventos</string>
+                  </property>
+                  <layout class="QVBoxLayout" name="verticalLayout_28">
+                   <item>
+                    <widget class="QCustomPlot" name="graphEvents" native="true">
+                     <property name="minimumSize">
+                      <size>
+                       <width>0</width>
+                       <height>200</height>
+                      </size>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QGroupBox" name="groupBox_9">
+                     <property name="title">
+                      <string>Zonas</string>
+                     </property>
+                     <layout class="QVBoxLayout" name="verticalLayout_29">
+                      <item>
+                       <widget class="QCustomPlot" name="graphZonePermTime" native="true">
+                        <property name="minimumSize">
+                         <size>
+                          <width>0</width>
+                          <height>200</height>
+                         </size>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
                 </item>
                </layout>
               </widget>
