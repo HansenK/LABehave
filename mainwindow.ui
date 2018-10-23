@@ -223,7 +223,7 @@ margin: 5px 0;</string>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_12">
              <item>
-              <widget class="QPlainTextEdit" name="plainTextEdit"/>
+              <widget class="QPlainTextEdit" name="description"/>
              </item>
             </layout>
            </widget>
@@ -603,7 +603,7 @@ border-radius: 4px;
              <x>0</x>
              <y>0</y>
              <width>202</width>
-             <height>226</height>
+             <height>170</height>
             </rect>
            </property>
            <attribute name="label">
@@ -650,22 +650,6 @@ border-radius: 4px;
                 <widget class="QCheckBox" name="checkBox_5">
                  <property name="text">
                   <string>Velocidade Máxima da Cobaia</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-            </item>
-            <item>
-             <widget class="QGroupBox" name="groupBox_7">
-              <property name="title">
-               <string>Atividade</string>
-              </property>
-              <layout class="QVBoxLayout" name="verticalLayout_17">
-               <item>
-                <widget class="QCheckBox" name="checkBox_4">
-                 <property name="text">
-                  <string>Tempo de imobilidade</string>
                  </property>
                 </widget>
                </item>
@@ -1085,6 +1069,9 @@ border-radius: 4px;
              <property name="text">
               <string>Mostrar Zonas</string>
              </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
             </widget>
            </item>
           </layout>
@@ -1103,7 +1090,7 @@ border-radius: 4px;
         <item>
          <widget class="QTabWidget" name="resultTabs">
           <property name="currentIndex">
-           <number>1</number>
+           <number>2</number>
           </property>
           <widget class="QWidget" name="tab">
            <attribute name="title">
@@ -1167,8 +1154,8 @@ border-radius: 4px;
                 <rect>
                  <x>0</x>
                  <y>0</y>
-                 <width>663</width>
-                 <height>290</height>
+                 <width>196</width>
+                 <height>116</height>
                 </rect>
                </property>
                <layout class="QVBoxLayout" name="verticalLayout_8">
@@ -1242,7 +1229,7 @@ border-radius: 4px;
                <property name="geometry">
                 <rect>
                  <x>0</x>
-                 <y>-439</y>
+                 <y>0</y>
                  <width>646</width>
                  <height>729</height>
                 </rect>

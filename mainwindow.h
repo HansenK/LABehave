@@ -18,13 +18,13 @@
 #define TOOL_CIRCLE     3
 #define TOOL_POLYGON    4
 
-#define EV_ZONE_ENTRY 1
-#define EV_ZONE_EXIT  2
-#define EV_ZONE_PERM  3
-#define EV_DIST       4
-#define EV_IMOB       5
-#define EV_INAC       6
-#define EV_VEL        7
+#define EV_ZONE_ENTRY     1
+#define EV_ZONE_EXIT      2
+#define EV_ZONE_TIME_IN   3
+#define EV_ZONE_TIME_OUT  4
+#define EV_IMOB_TIME      5
+#define EV_DIST           6
+#define EV_VEL            7
 
 
 #include <QMainWindow>
@@ -42,6 +42,13 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QListWidget>
+
+#include <QUrl>
+#include <QtNetwork/QNetworkAccessManager>
+#include <QtNetwork/QNetworkRequest>
+#include <QtNetwork/QNetworkReply>
+
+#include <bitset>
 
 #include "opencv2/opencv.hpp"
 
@@ -137,8 +144,14 @@ private slots:
 
     void on_eventResultSelect_currentIndexChanged(int index);
 
+    void postRequest();
+
 private:
     Ui::MainWindow *ui;
+
+    //networking
+    QNetworkAccessManager * manager;
+    QNetworkRequest request;
 
     // projeto
     QString projectName;
@@ -156,7 +169,7 @@ private:
     std::vector<cv::Point> selectPolygon, animalContour;
     bool flagSelectPoints = false;
     bool flagSelectPolygon = false, flagSelectPolygon2 = false;
-    float pixelsPerMeter = 0;
+    double pixelsPerMeter = 0;
 
     // eventos --------------------------------
     struct subevent{
@@ -171,8 +184,8 @@ private:
         int subEventsCount;                     // contador de subeventos do evento
         bool allowBetween;                      // permite outros subeventos
         vector<struct subevent> subevents; // sequencia de subeventos
-        vector<float> t_start;                  // tempo de inicio do evento
-        vector<float> t_stop;                   // tempo de termino do evento
+        vector<double> t_start;                  // tempo de inicio do evento
+        vector<double> t_stop;                   // tempo de termino do evento
     };
 
     std::vector<struct event> events;

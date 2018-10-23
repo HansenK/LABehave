@@ -12,6 +12,19 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
     QMainWindow::showMaximized(); //Inicia com a janela maximizada
 
+    // NETWORKING
+    manager = new QNetworkAccessManager();
+       QObject::connect(manager, &QNetworkAccessManager::finished,
+           this, [=](QNetworkReply *reply) {
+               ui->description->setPlainText(reply->readAll());
+               qDebug() << reply->header(QNetworkRequest::ContentTypeHeader).toString();
+               qDebug() << reply->header(QNetworkRequest::LastModifiedHeader).toDateTime().toString();;
+               qDebug() << reply->header(QNetworkRequest::ContentLengthHeader).toULongLong();
+               qDebug() << reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+               qDebug() << reply->attribute(QNetworkRequest::HttpReasonPhraseAttribute).toString();
+           }
+       );
+
     /*** IMPORTA O ARQUIVO DE ESTILIZACAO ***/
     QFile File(":/style/style.qss");
     File.open(QFile::ReadOnly);
@@ -22,7 +35,6 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->tabWidget->setTabEnabled(1,false);
     ui->tabWidget->setTabEnabled(2,false);
     ui->tabWidget->setTabEnabled(3,false);
-    //ui->tabWidget->setTabEnabled(4,false);
 
     ui->btnConfig->setEnabled(false);
     ui->meassureResultBox->setEnabled(false);
@@ -52,6 +64,11 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->subEventSelect->addItem("Selecione");
     ui->subEventSelect->addItem("Entrada em Zona");
     ui->subEventSelect->addItem("Saída de Zona");
+    ui->subEventSelect->addItem("Tempo dentro da Zona");
+    ui->subEventSelect->addItem("Tempo fora da Zona");
+    ui->subEventSelect->addItem("Tempo imóvel");
+    ui->subEventSelect->addItem("Distância percorrida");
+    ui->subEventSelect->addItem("Velocidade atingida");
 
     ui->eventResultTable->setColumnCount(3);
     ui->eventResultTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
@@ -65,6 +82,19 @@ MainWindow::MainWindow(QWidget *parent) :
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+//*** REQUISICOES ***//
+void MainWindow::postRequest(){
+    request.setUrl(QUrl("https://southcentralus.api.cognitive.microsoft.com/customvision/v2.0/Prediction/c88a2ff8-3541-45f5-ae84-d73621d04387/image?iterationId=b7b46157-149d-4184-98f2-0e00cba514d7"));
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/octet-stream");
+    request.setRawHeader("Prediction-Key", "6903a738f35c4b729762b819dbd9e7c7");
+
+    QFile file("C:/fon.png");
+    if (!file.open(QIODevice::ReadOnly)) return;
+    QByteArray data = file.readAll();
+
+    manager->post(request, data);
 }
 
 /*** CRIAR NOVO PROJETO ***/
@@ -155,8 +185,8 @@ Point MainWindow::getFrameCursor(QGraphicsView& graphicsView, Mat& frame){
     else      pmy /= (static_cast<float>(DY)*static_cast<float>(dx))/
                      (static_cast<float>(DX)*static_cast<float>(dy));
 
-    Point p = Point( qp.x()*pmx + (static_cast<float>(DX)/2 - static_cast<float>(dx)*pmx/2) ,
-                     qp.y()*pmy + (static_cast<float>(DY)/2 - static_cast<float>(dy)*pmy/2) );
+    Point p = Point( static_cast<int>(qp.x()*pmx + (DX/2 - dx*pmx/2)) ,
+                     static_cast<int>(qp.y()*pmy + (DY/2 - dy*pmy/2)) );
 
     if      (p.x > DX) p.x = DX;
     else if (p.x <  0) p.x =  0;
@@ -179,22 +209,22 @@ QTime MainWindow::getVideoDuration(){
 }
 
 int getQuad(cv::Point p1, cv::Point p2){
-    int quad = 0b1111;
+    bitset <4> quad("1111");
 
     // 4 | 1
     // - - -
     // 3 | 2
 
-    if(p2.x - p1.x >  20) quad &= 0b0011;
-    if(p2.x - p1.x < -20) quad &= 0b1100;
-    if(p2.y - p1.y >  20) quad &= 0b0110;
-    if(p2.y - p1.y < -20) quad &= 0b1001;
+    if(p2.x - p1.x >  20) quad &= bitset<4>("0011");
+    if(p2.x - p1.x < -20) quad &= bitset<4>("1100");
+    if(p2.y - p1.y >  20) quad &= bitset<4>("0110");
+    if(p2.y - p1.y < -20) quad &= bitset<4>("1001");
 
-    return quad;
+    return static_cast<int>(quad.to_ulong());
 }
 
 bool inZone(Mat& animal, Mat& zone, float precision = 0.75){
-    int nPixels = (float)countNonZero(animal)*precision;
+    int nPixels = static_cast<int>(countNonZero(animal)*precision);
     Mat animalIn;
     //bitwise_and(animal, zone, animalIn);
     animal.copyTo(animalIn, zone);
@@ -220,7 +250,7 @@ void MainWindow::on_actionOpenVideo_triggered()
     QImage qimgVideoThumb(frame.data,
                           frame.cols,
                           frame.rows,
-                          frame.step,
+                          static_cast<int>(frame.step),
                           QImage::Format_RGB888);
     QGraphicsPixmapItem videoPixThumb( QPixmap::fromImage(qimgVideoThumb) );
     ui->videoList->addItem(new QListWidgetItem(QIcon(videoPixThumb.pixmap()), videoFilePath));
@@ -339,7 +369,7 @@ void MainWindow::config(){
                         // MEDIDA -----------------------------------------------------------------
                         if(mode == MODE_MEASSURE && QApplication::mouseButtons() == Qt::LeftButton){
                             putText(frame,
-                                    to_string((int)norm(selectPoints[0]-selectPoints[1])) + "px",
+                                    to_string(static_cast<int>(norm(selectPoints[0]-selectPoints[1]))) + "px",
                                     getFrameCursor(*ui->graphicsViewPlayer, frame),
                                     FONT_HERSHEY_PLAIN,
                                     2, CV_RGB(255,255,0), 2);
@@ -477,26 +507,18 @@ void MainWindow::on_videoList_itemDoubleClicked(){ config(); }
 //*** ANALISE ***//
 void MainWindow::on_startBtn_pressed()
 {
-    /*if(video.isOpened() && lock){
-        ui->startBtn->setText("Reiniciar Análise");
-        video.release();
-        lock = false;
-        return;
-    }*/
-
     if(background.empty() || animalContour.empty()){
         ui->statusBar->showMessage("Defina o background e a cobaia primeiro!");
         return;
     }
 
     video.open(videoFiles[ui->videoList->currentRow()].toStdString());
-    int video_fps = video.get(CAP_PROP_FPS);
+    double video_fps = video.get(CAP_PROP_FPS);
 
     ui->tabWidget->setTabEnabled(3,true);
     ui->tabWidget->setCurrentIndex(3);
 
     if(ui->checkShowDistance->isChecked()) ui->distanceBox->show();
-    //ui->tabWidget->setTabEnabled(2, false);
 
     // frames de inicio e termino -------------------------
     uint startTimeSecs = ui->startTime->time().hour()   * 3600 +
@@ -522,8 +544,8 @@ void MainWindow::on_startBtn_pressed()
     }
 
     // Mapas ----------------------------------------------
-    //if(ui->checkCreateTrackMap->isChecked())
-        //ui->viewSelector->addItem("trajeto");
+    if(ui->checkCreateTrackMap->isChecked())
+        ui->viewSelector->addItem("trajeto");
 
     if(ui->checkCreateHeatMap->isChecked())
         ui->viewSelector->addItem("heatmap");
@@ -567,6 +589,12 @@ void MainWindow::on_startBtn_pressed()
     ui->graphEvents->xAxis->setRange(0, static_cast<int>(events.size()) + 1);
     ui->graphEvents->yAxis->setRange(0, 0);
 
+    QSharedPointer<QCPAxisTickerFixed> fixedTicker(new QCPAxisTickerFixed);
+    fixedTicker->setTickStep(1.0); // tick step -> 1.0
+
+    ui->graphEvents->xAxis->setTicker(fixedTicker);
+
+
     QCPBars *evBars = new QCPBars(ui->graphEvents->xAxis, ui->graphEvents->yAxis);
     evBars->setData(ev_x, ev_y);
     evBars->setWidth(0.3);
@@ -591,6 +619,7 @@ void MainWindow::on_startBtn_pressed()
     ui->graphZonePermTime->yAxis->setLabel("Tempo (s)");
     ui->graphZonePermTime->xAxis->setRange(0, static_cast<int>(zones.size()) + 1);
     ui->graphZonePermTime->yAxis->setRange(0, 0);
+    ui->graphZonePermTime->xAxis->setTicker(fixedTicker);
 
     QCPBars *zpermBars = new QCPBars(ui->graphZonePermTime->xAxis, ui->graphZonePermTime->yAxis);
     zpermBars->setData(zperm_x, zperm_y);
@@ -625,7 +654,7 @@ void MainWindow::on_startBtn_pressed()
     const int margin = 15, learnSizeCount = 100, nPts = 50;
     int movementCount = 0, smallObjectArea = 0;
     int gtIndexContour = 0;
-    float avArea, avAreaSum = 0;
+    double avArea, avAreaSum = 0;
     bool isCalibrated = false;
     vector<vector<Point>> contours, contours_poly, movementContours;
     vector<Point> pts[nPts];
@@ -635,12 +664,15 @@ void MainWindow::on_startBtn_pressed()
     vector<Point2f> mc;                // centro
     vector<Point> trackPath, lastContour;
     uchar value;
-    vector<float> area;
+    vector<double> area;
 
-    //velocidade
-    const uint maxVelPts = video_fps;
+    //movimento / velocidade
+    bool isMoving = false;
+    const double maxVelPts = video_fps;
     vector<Point> velPts;
-    float currentVel = 0.0, maxVel = 0;
+    double currentVel = 0.0, maxVel = 0, startMovingVel = 0.001;
+                                                       // 1cm/s
+                                                       // velocidade minima para movimentacao
 
     // mapeamento da orientacao da cobaia
     const int orientationDist = 30;  //        30 pixels
@@ -655,13 +687,15 @@ void MainWindow::on_startBtn_pressed()
     while(video.isOpened())
     {
         video >> frame;
-        value = ui->slider->value();
+        value = static_cast<uchar>(ui->slider->value());
         ui->progressBar->setValue(video.get(CAP_PROP_POS_FRAMES));
 
         if(!frame.empty())
         {
+            // Frame atual
+            double currentFrame = video.get(CAP_PROP_POS_FRAMES);
             // Instante atual
-            float currentTime = video.get(CAP_PROP_POS_FRAMES) / video_fps;
+            double currentTime = currentFrame / video_fps;
 
             if(!smallObjectArea) smallObjectArea = (frame.rows*frame.cols)*0.003;
             frame.copyTo(frame2, maskZoneGlobal);
@@ -807,17 +841,16 @@ void MainWindow::on_startBtn_pressed()
                 } // ------------------------------------------------------------------------------
 
                 // area media da cobaia (precisa estar depois do anti-teleporte)
-                float currentArea = contourArea(contours_poly[gtIndexContour]);
+                double currentArea = contourArea(contours_poly[gtIndexContour]);
                 area.push_back(currentArea);
                 avAreaSum += currentArea;
                 avArea = avAreaSum / area.size();
 
                 // ----------------------------------------------------------------------------------------------------
 
-
                 //trajeto
                 if(ui->checkCreateTrackMap->isChecked() && pts[0].size() > 1 && isCalibrated){
-                    uint trackColor = (((video.get(CAP_PROP_POS_FRAMES) - startFrame)*255)/endFrame);
+                    int trackColor = static_cast<int>((((currentFrame - startFrame)*255)/endFrame));
                     line(trackImg, pts[0][1], pts[0][2], Scalar(trackColor,0,255-trackColor), 2);
                 }
                 if(ui->checkShowTrack->isChecked()){
@@ -830,9 +863,39 @@ void MainWindow::on_startBtn_pressed()
                     polylines(frame, pts[0], false, CV_RGB(0,255,0), 3);
                 }
 
+
+                //distancia percorrida
+                trackPath.push_back(pts[0][pts[0].size()-1]);
+                if(static_cast<bool>(pixelsPerMeter)){
+                    ui->distanceLabel->setText(QString::number(arcLength(trackPath,false)/pixelsPerMeter)+"m");
+
+                    //velocidade
+                    velPts.push_back(pts[0][pts[0].size()-1]);
+                    if(velPts.size() > maxVelPts){
+                        velPts.erase(velPts.begin());
+                        if(isCalibrated) currentVel = norm(velPts[0] - velPts[velPts.size()-1])/pixelsPerMeter;
+
+                        //mobilidade
+                        currentVel > startMovingVel ? isMoving = true : isMoving = false;
+
+                        if(currentVel > maxVel){
+                            maxVel = currentVel;
+                            //atualiza a faixa Y do grafico
+                            ui->graphVel->yAxis->setRange(0, maxVel);
+                        }
+                        //atualiza o grafico
+                        vel_y[static_cast<int>(currentFrame) - 1] = currentVel;
+                        ui->graphVel->graph(0)->setData(vel_x, vel_y);
+                        ui->graphVel->replot();
+                    }
+                    ui->maxVelLabel->setText(QString::number(maxVel) + " m/s");
+                    ui->currentVelLabel->setText(QString::number(currentVel) + " m/s");
+                }
+
+
                 //eventos
-                for(int i=0; i<events.size(); i++){
-                    struct subevent sEv = events[i].subevents[events[i].subEventsCount];
+                for(uint i=0; i<events.size(); i++){
+                    struct subevent sEv = events[i].subevents[static_cast<uint>(events[i].subEventsCount)];
 
                     if(sEv.type == EV_ZONE_ENTRY){
                         if(inZone(frame2, zones[sEv.intParam].zoneMat) && !zones[sEv.intParam].inZone){
@@ -851,7 +914,7 @@ void MainWindow::on_startBtn_pressed()
                         }
                     }
 
-                    if(events[i].subEventsCount == events[i].subevents.size()){
+                    if(static_cast<uint>(events[i].subEventsCount) == events[i].subevents.size()){
                         events[i].subEventsCount = 0;
 
                         // indica que o evento ocorreu
@@ -996,34 +1059,8 @@ void MainWindow::on_startBtn_pressed()
                 if(ui->checkShowPoint->isChecked())
                     circle(frame, pts[0][pts[0].size()-1], 5, red, -1, 8, 0);
 
-
-                //distancia percorrida
-                trackPath.push_back(pts[0][pts[0].size()-1]);
-                if(pixelsPerMeter != 0){
-                    ui->distanceLabel->setText(QString::number(arcLength(trackPath,false)/pixelsPerMeter)+"m");
-
-                    //velocidade
-                    velPts.push_back(pts[0][pts[0].size()-1]);
-                    if(velPts.size() > maxVelPts){
-                        velPts.erase(velPts.begin());
-                        if(isCalibrated) currentVel = norm(velPts[0] - velPts[velPts.size()-1])/pixelsPerMeter;
-                        if(currentVel > maxVel){
-                            maxVel = currentVel;
-                            //atualiza a faixa Y do grafico
-                            ui->graphVel->yAxis->setRange(0, maxVel);
-                        }
-                        //atualiza o grafico
-                        vel_y[video.get(CAP_PROP_POS_FRAMES) - 1] = currentVel;
-                        ui->graphVel->graph(0)->setData(vel_x, vel_y);
-                        ui->graphVel->replot();
-                    }
-                    ui->maxVelLabel->setText(QString::number(maxVel) + " m/s");
-                    ui->currentVelLabel->setText(QString::number(currentVel) + " m/s");
-                }
-
-
                 // copia o contorno da cobaia
-                lastContour = contours[gtIndexContour];
+                lastContour = contours[static_cast<uint>(gtIndexContour)];
             }
 
             // Mostra o frame --------------------------------------------------------------------
@@ -1042,14 +1079,14 @@ void MainWindow::on_startBtn_pressed()
             QImage qimg(frameAlternative->data,
                                    frameAlternative->cols,
                                    frameAlternative->rows,
-                                   frameAlternative->step,
+                                   static_cast<int>(frameAlternative->step),
                                    formatAlternative);
             pixmap.setPixmap( QPixmap::fromImage(qimg) );
             ui->graphicsView->fitInView(&pixmap, Qt::KeepAspectRatio);
             // -----------------------------------------------------------------------------------------------
 
             // Fim da analise
-            if(video.get(CAP_PROP_POS_FRAMES) == endFrame || ui->stopBtn->isDown()){
+            if(static_cast<int>(currentFrame) == endFrame || ui->stopBtn->isDown()){
 
                 for(uint i=0; i<zones.size(); i++){
                     zones[i].permTime += currentTime - zones[i].lastEntryTime;
@@ -1397,7 +1434,11 @@ void MainWindow::on_subEventSelect_currentIndexChanged(const QString &arg1)
     ui->subEventParamSelect->hide();
     ui->subEventParamSelect->clear();
 
-    if(arg1 == "Entrada em Zona" || arg1 == "Saída de Zona"){
+    // selecao de zona
+    if(arg1 == "Entrada em Zona"
+    || arg1 == "Saída de Zona"
+    || arg1 == "Tempo dentro da Zona"
+    || arg1 == "Tempo fora da Zona"){
         ui->subEventParamSelect->show();
 
         ui->subEventParamSelect->addItem("Selecione");
@@ -1405,8 +1446,24 @@ void MainWindow::on_subEventSelect_currentIndexChanged(const QString &arg1)
             ui->subEventParamSelect->addItem("Zona " + QString::number(i+1));
         }
     }
+    // valor (tempo)
+    if(arg1 == "Tempo dentro da Zona"
+    || arg1 == "Tempo fora da Zona"
+    || arg1 == "Tempo imóvel"){
+        ui->subEventParam->show();
+        ui->subEventParam->setPlaceholderText("Tempo (segundos)");
+    }
+    //valor (metros)
+    if(arg1 == "Distância percorrida"){
+        ui->subEventParam->show();
+        ui->subEventParam->setPlaceholderText("Distância (metros)");
+    }
+    //valor (metros/segundo)
+    if(arg1 == "Velocidade atingida"){
+        ui->subEventParam->show();
+        ui->subEventParam->setPlaceholderText("Velocidade (metros/segundo)");
+    }
 }
-
 void MainWindow::on_btnAddSubEvent_pressed()
 {
     if(ui->subEventSelect->currentIndex() == 0) return;
@@ -1415,10 +1472,19 @@ void MainWindow::on_btnAddSubEvent_pressed()
     tmp_subevent.type = ui->subEventSelect->currentIndex();
 
     // entrada/saida de zonas
-    if(tmp_subevent.type == EV_ZONE_ENTRY || tmp_subevent.type == EV_ZONE_EXIT){
+    if(tmp_subevent.type == EV_ZONE_ENTRY || tmp_subevent.type == EV_ZONE_EXIT
+    || tmp_subevent.type == EV_ZONE_TIME_IN || tmp_subevent.type == EV_ZONE_TIME_OUT){
         if(ui->subEventParamSelect->currentIndex() == 0) return;
-
         tmp_subevent.intParam = ui->subEventParamSelect->currentIndex()-1;
+    }
+    // definicao do valor
+    if(tmp_subevent.type == EV_ZONE_TIME_IN
+    || tmp_subevent.type == EV_ZONE_TIME_OUT
+    || tmp_subevent.type == EV_IMOB_TIME
+    || tmp_subevent.type == EV_DIST
+    || tmp_subevent.type == EV_VEL){
+        if(ui->subEventParam->text().isEmpty()) return;
+        tmp_subevent.floatParam = ui->subEventParam->text().toFloat();
     }
 
     // adiciona o subevento na lista
@@ -1426,6 +1492,18 @@ void MainWindow::on_btnAddSubEvent_pressed()
         ui->subEventList->addItem("Entrada na Zona " + QString::number(tmp_subevent.intParam + 1));
     if(tmp_subevent.type == EV_ZONE_EXIT)
         ui->subEventList->addItem("Saída da Zona " + QString::number(tmp_subevent.intParam + 1));
+    if(tmp_subevent.type == EV_ZONE_TIME_IN)
+        ui->subEventList->addItem("Tempo dentro da Zona " + QString::number(tmp_subevent.intParam + 1)
+                                + ": " + QString::number(static_cast<double>(tmp_subevent.floatParam)) + "s");
+    if(tmp_subevent.type == EV_ZONE_TIME_OUT)
+        ui->subEventList->addItem("Tempo fora da Zona " + QString::number(tmp_subevent.intParam + 1)
+                                + ": " + QString::number(static_cast<double>(tmp_subevent.floatParam)) + "s");
+    if(tmp_subevent.type == EV_IMOB_TIME)
+        ui->subEventList->addItem("Tempo imóvel: " + QString::number(static_cast<double>(tmp_subevent.floatParam)) + "s");
+    if(tmp_subevent.type == EV_DIST)
+        ui->subEventList->addItem("Distância percorrida: " + QString::number(static_cast<double>(tmp_subevent.floatParam)) + "m");
+    if(tmp_subevent.type == EV_VEL)
+        ui->subEventList->addItem("Velocidade atingida: " + QString::number(static_cast<double>(tmp_subevent.floatParam)) + "m/s");
 
     // se nao houver eventos eh criado um
     if(events.empty() || (!events.empty() && !events[events.size()-1].name.isEmpty())){
@@ -1436,10 +1514,9 @@ void MainWindow::on_btnAddSubEvent_pressed()
 
     events[events.size()-1].subevents.push_back(tmp_subevent);
 }
-
 void MainWindow::on_btnNewEvent_pressed()
 {
-    if(!events.empty() && !events[events.size()-1].subevents.empty()){
+    if(!events.empty() && ui->subEventList->count() > 0){
         ui->subEventList->clear();
 
         if(ui->eventNameInput->text().isEmpty())
@@ -1450,7 +1527,6 @@ void MainWindow::on_btnNewEvent_pressed()
         ui->eventList->addItem(events[events.size()-1].name);
     }
 }
-
 void MainWindow::on_eventResultSelect_currentIndexChanged(int index)
 {
     ui->eventResultTable->clear(); //limpa a tabela de resultados
@@ -1468,3 +1544,5 @@ void MainWindow::on_eventResultSelect_currentIndexChanged(int index)
                                                                                - events[index].t_start[i]) + " s"));
     }
 }
+
+
