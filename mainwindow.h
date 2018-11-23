@@ -146,6 +146,8 @@ private slots:
 
     void postRequest();
 
+    void on_actionSave_triggered();
+
 private:
     Ui::MainWindow *ui;
 

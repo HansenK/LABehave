@@ -399,15 +399,15 @@ border-radius: 4px;
         <item>
          <widget class="QToolBox" name="toolBox">
           <property name="currentIndex">
-           <number>5</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="page">
            <property name="geometry">
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>193</width>
-             <height>149</height>
+             <width>341</width>
+             <height>173</height>
             </rect>
            </property>
            <attribute name="label">
@@ -447,7 +447,7 @@ border-radius: 4px;
                  <number>1</number>
                 </property>
                 <property name="value">
-                 <number>15</number>
+                 <number>30</number>
                 </property>
                </widget>
               </item>
@@ -474,8 +474,8 @@ border-radius: 4px;
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>117</width>
-             <height>76</height>
+             <width>341</width>
+             <height>173</height>
             </rect>
            </property>
            <attribute name="label">
@@ -503,8 +503,8 @@ border-radius: 4px;
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>169</width>
-             <height>62</height>
+             <width>341</width>
+             <height>173</height>
             </rect>
            </property>
            <attribute name="label">
@@ -549,8 +549,8 @@ border-radius: 4px;
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>252</width>
-             <height>122</height>
+             <width>341</width>
+             <height>173</height>
             </rect>
            </property>
            <attribute name="label">
@@ -602,8 +602,8 @@ border-radius: 4px;
             <rect>
              <x>0</x>
              <y>0</y>
-             <width>202</width>
-             <height>170</height>
+             <width>341</width>
+             <height>173</height>
             </rect>
            </property>
            <attribute name="label">
@@ -647,7 +647,7 @@ border-radius: 4px;
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="checkBox_5">
+                <widget class="QCheckBox" name="checkShowMaxVel">
                  <property name="text">
                   <string>Velocidade Máxima da Cobaia</string>
                  </property>
@@ -1090,7 +1090,7 @@ border-radius: 4px;
         <item>
          <widget class="QTabWidget" name="resultTabs">
           <property name="currentIndex">
-           <number>2</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="tab">
            <attribute name="title">
@@ -1230,7 +1230,7 @@ border-radius: 4px;
                 <rect>
                  <x>0</x>
                  <y>0</y>
-                 <width>646</width>
+                 <width>88</width>
                  <height>729</height>
                 </rect>
                </property>
@@ -1508,7 +1508,7 @@ border-radius: 4px;
   <customwidget>
    <class>QCustomPlot</class>
    <extends>QWidget</extends>
-   <header>qcustomplot.h</header>
+   <header location="global">qcustomplot.h</header>
    <container>1</container>
   </customwidget>
  </customwidgets>

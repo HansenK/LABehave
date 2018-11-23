@@ -144,6 +144,28 @@ void MainWindow::openProject(QString projectFileName){
     projectDir= settingsJsonObj["dir"].toString();
     ui->projectNameLabel->setText(projectName);
 
+    // videos importados
+    QJsonArray videosJsonArray = settingsJsonObj["videos"].toArray();
+    for(int i=0; i<videosJsonArray.size(); i++){
+        QString videoFilePath = videosJsonArray.at(i).toString();
+
+        if(!video.open(videoFilePath.toStdString())) return;
+
+        // Thumbnail
+        video >> frame;
+        cvtColor(frame, frame, COLOR_BGR2RGB);
+        QImage qimgVideoThumb(frame.data,
+                              frame.cols,
+                              frame.rows,
+                              static_cast<int>(frame.step),
+                              QImage::Format_RGB888);
+        QGraphicsPixmapItem videoPixThumb( QPixmap::fromImage(qimgVideoThumb) );
+        ui->videoList->addItem(new QListWidgetItem(QIcon(videoPixThumb.pixmap()), videoFilePath));
+
+        videoFiles.push_back(videoFilePath);
+        video.release();
+    }
+
     settingsFile.close();
 }
 bool MainWindow::on_actionOpenProject_triggered()
@@ -164,6 +186,46 @@ void MainWindow::on_btnLoadProject_pressed(){ ui->actionOpenProject->trigger(); 
 void MainWindow::on_recentProjects_itemDoubleClicked(QListWidgetItem *item){
     QString projectFileName = "C:/LABEHAVE/" + item->text() + "/conf.lbh";
     openProject(projectFileName);
+}
+
+/*** SALVAR PROJETO ***/
+void MainWindow::on_actionSave_triggered()
+{
+    // Substitui o arquivo de configuracoes JSON
+    QJsonObject settingsJsonObj{
+      {"name", projectName},
+      {"dir", projectDir.absolutePath()}
+    };
+
+    // videos importados
+    QJsonArray videosJsonArray;
+    for(int i=0; i<ui->videoList->count(); i++){
+        videosJsonArray.push_back(ui->videoList->item(i)->text());
+    }
+    settingsJsonObj.insert("videos", videosJsonArray);
+
+    // relacao metrica
+    settingsJsonObj.insert("pixelsPerMeter", pixelsPerMeter);
+
+    // resultados
+    settingsJsonObj.insert("generateTrackMap", ui->checkCreateTrackMap->isChecked());
+    settingsJsonObj.insert("generateHeatMap", ui->checkCreateHeatMap->isChecked());
+    settingsJsonObj.insert("showDistance", ui->checkShowDistance->isChecked());
+    settingsJsonObj.insert("showMaxVel", ui->checkShowMaxVel->isChecked());
+
+    // thresholding
+    settingsJsonObj.insert("thresholding", ui->slider->value());
+
+    QJsonDocument settingsJsonDoc(settingsJsonObj);
+    QFile settingsFile(projectDir.absolutePath() + "/conf.lbh");
+    Q_ASSERT(settingsFile.open(QFile::WriteOnly));
+
+    settingsFile.write(settingsJsonDoc.toJson());
+    settingsFile.close();
+
+    settingsFile.close();
+
+    ui->statusBar->showMessage("Projeto Salvo!", 5000);
 }
 
 /*** ORGANIZA OS CONTORNOS ***/
@@ -256,12 +318,16 @@ void MainWindow::on_actionOpenVideo_triggered()
     ui->videoList->addItem(new QListWidgetItem(QIcon(videoPixThumb.pixmap()), videoFilePath));
 
     videoFiles.push_back(videoFilePath);
+    video.release();
 }
 // Botao
 void MainWindow::on_btnAddVideo_pressed() { ui->actionOpenVideo->trigger(); }
 
 //*** CONFIGURACAO ***//
 void MainWindow::config(){
+    if(!video.open(ui->videoList->currentItem()->text().toStdString())) return;
+    video >> frame;
+    cvtColor(frame, frame, COLOR_BGR2RGB);
 
     // Processo inicial --------------------------------------------------------------------------------------------
     maskZoneGlobal.create(frame.size(), CV_8UC1);
@@ -687,6 +753,7 @@ void MainWindow::on_startBtn_pressed()
     while(video.isOpened())
     {
         video >> frame;
+
         value = static_cast<uchar>(ui->slider->value());
         ui->progressBar->setValue(video.get(CAP_PROP_POS_FRAMES));
 
@@ -1027,7 +1094,7 @@ void MainWindow::on_startBtn_pressed()
                     for( int j = 0; j < 4; j++ )
                         line( frame, rect_points[j], rect_points[(j+1)%4], cyan, 1, 8 );
 
-                    //orientacao
+                    /*/orientacao
                     if(orientationMap.empty()) orientationMap.create(frame.size(), frame.type());
 
                     uint quad = 0;
@@ -1052,7 +1119,7 @@ void MainWindow::on_startBtn_pressed()
                     if(quad & 8){
                         line(frame, Point(0, frame.rows/2), Point(0, 0), CV_RGB(0,0,255), 8);
                         line(frame, Point(0, 0), Point(frame.cols/2, 0), CV_RGB(0,0,255), 8);
-                    }
+                    }*/
                 }
 
                 //centro
@@ -1544,5 +1611,3 @@ void MainWindow::on_eventResultSelect_currentIndexChanged(int index)
                                                                                - events[index].t_start[i]) + " s"));
     }
 }
-
-
