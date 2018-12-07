@@ -325,6 +325,7 @@ void MainWindow::on_btnAddVideo_pressed() { ui->actionOpenVideo->trigger(); }
 
 //*** CONFIGURACAO ***//
 void MainWindow::config(){
+
     if(!video.open(ui->videoList->currentItem()->text().toStdString())) return;
     video >> frame;
     cvtColor(frame, frame, COLOR_BGR2RGB);
@@ -1219,6 +1220,10 @@ void MainWindow::on_actionFinish_triggered()
         ui->eventResultSelect->setCurrentIndex(0);
         MainWindow::on_eventResultSelect_currentIndexChanged(0);
     }
+
+    // Atualiza o banco de dados
+    db.newTest(projectName);
+
 }
 
 // Impede o programa de fechar caso o video ainda esteja em execucao

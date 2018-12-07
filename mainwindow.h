@@ -51,6 +51,7 @@
 #include <bitset>
 
 #include "opencv2/opencv.hpp"
+#include "databasemanager.h"
 
 using namespace std;
 
@@ -211,6 +212,10 @@ private:
     int tool = -1;
 
     int startFrame, endFrame;
+
+    // banco de dados
+    DatabaseManager db;
+
 };
 
 #endif // MAINWINDOW_H

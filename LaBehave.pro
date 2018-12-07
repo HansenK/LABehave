@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui network
+QT       += core gui network sql
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets printsupport
 
@@ -27,7 +27,8 @@ SOURCES += \
         main.cpp \
         mainwindow.cpp \
     background.cpp \
-    qcustomplot.cpp
+    qcustomplot.cpp \
+    databasemanager.cpp
 
 INCLUDEPATH += C:/TCC/OpenCV/install/include
 
@@ -47,7 +48,8 @@ LIBS += -LC:\\TCC\\OpenCV\\bin \
 
 HEADERS += \
         mainwindow.h \
-    qcustomplot.h
+    qcustomplot.h \
+    databasemanager.h
 
 FORMS += \
         mainwindow.ui
